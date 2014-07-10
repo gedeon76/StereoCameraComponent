@@ -31,7 +31,7 @@ void Settings::write(FileStorage& fs) const  //Write serialization for this clas
 
 }
 
-void Settings::read(FileNode& node)	//Read serialization for this class
+void Settings::read(const FileNode& node)	//Read serialization for this class
 {
 	node["BoardSize_Width"] >> boardSize.width;
 	node["BoardSize_Height"] >> boardSize.height;
@@ -139,7 +139,8 @@ Mat Settings::nextImage()
 
 static bool readStringList(const string& filename, vector<string>& l)
 {
-	l.clear();
+	//l.clear();
+	l.resize(0);
 	FileStorage fs(filename, FileStorage::READ);
 	if (!fs.isOpened())
 		return false;

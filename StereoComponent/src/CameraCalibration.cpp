@@ -21,8 +21,9 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 		cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
 		return -1;
 	}
+	
 	fs["Settings"] >> s;
-	fs.release();                                         // close Settings file
+	                                         // close Settings file
 
 	if (!s.goodInput)
 	{
@@ -30,6 +31,21 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 		return -1;
 	}
 	
+}
+
+
+/// static function that reads the settings file
+/// @param[in] node FileNode to read from
+/// @param[out] Settings Settings to be saved from FileNode
+/// @param[in] default_value value by default if FileNode is empty
+static void read(const FileNode& node, Settings& x, const Settings& default_value=Settings())
+{
+	if (node.empty()){
+		x = default_value;
+	}
+	else{
+		x.read(node);
+	}
 }
 
 void CameraCalibration::getImagesAndFindPatterns()

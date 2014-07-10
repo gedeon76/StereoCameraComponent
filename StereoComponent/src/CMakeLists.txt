@@ -10,12 +10,13 @@ endif (UNIX)
 
 
 set(StereoCameraComponent_SRCS Settings.h CameraCalibration.h InterfaceStereoCamera.hpp StereoCamera.h StereoCameraAccess.h Settings.cpp CameraCalibration.cpp StereoCamera.cpp StereoCameraAccess.cpp)
-add_executable(StereoCameraComponent ${StereoCameraComponent_SRCS})
+#add_executable(StereoCameraComponent ${StereoCameraComponent_SRCS})
+add_library(StereoCameraComponent STATIC ${StereoCameraComponent_SRCS})
 
 
-if (UNIX) 
-  target_link_libraries(StereoCameraComponent ${OpenCV_LIBS})
-endif (UNIX)
-if (WIN32)
-  target_link_libraries(StereoCameraComponent ${OpenCV_LIBS})
-endif (WIN32)
+#if (UNIX) 
+#  target_link_libraries(StereoCameraComponent ${OpenCV_LIBS})
+#endif (UNIX)
+#if (WIN32)
+#  target_link_libraries(StereoCameraComponent ${OpenCV_LIBS})
+#endif (WIN32)
