@@ -9,7 +9,7 @@ class StereoCamera : public InterfaceStereoCamera {
 
 public:
 
-	/// Use of virtual constructor
+	// create the interface implementing the virtual constructor
 	InterfaceStereoCamera *Create(){ return new StereoCamera(); };
 	~StereoCamera();
 

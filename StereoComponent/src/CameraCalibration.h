@@ -19,8 +19,6 @@ public:
 
 	~CameraCalibration();
 
-	void help();
-
 	int readSettings(string &inputSettingsFile);
 
 	void getImagesAndFindPatterns();
@@ -45,6 +43,8 @@ public:
 
 	bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, 
 						Mat& distCoeffs, vector<vector<Point2f>> imagePoints);
+
+
 
 private:
 

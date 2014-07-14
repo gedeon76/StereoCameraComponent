@@ -27,6 +27,11 @@ enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 using namespace cv;
 using namespace std;
 
+/// read each image name
+/// @param[in] filename Name of the image
+/// @param[in] l list of names of the images
+bool readStringList(const string& filename, vector<string>& l);
+
 class Settings {
 
 public:
@@ -68,7 +73,6 @@ public:
 	/// @param[in,out] fs It contains the setting class parameters
 	void write(FileStorage& fs) const;
 
-
 	/// read the configuration settings xml file 
 	/// @param[in] node It contains the readings from the configuration file 
 	void read(const FileNode& node);
@@ -78,12 +82,5 @@ public:
 
 	/// get the next image to process
 	Mat nextImage();
-
-
-	/// read each image name
-	/// @param[in] filename Name of the image
-	/// @param[in] l list of names of the images
-	static bool readStringList(string& filename, vector<string>& l);
-
 
 };

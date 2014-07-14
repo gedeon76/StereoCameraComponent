@@ -36,6 +36,14 @@ void StereoCamera::getStereoTransforms(cv::OutputArray StereoTransforms){}
 // get the projection matrix for each camera 
 void StereoCamera::getProjectionMatrices(cv::OutputArray ProjectionMatrices){}
 
+// get the vergence angle
+double StereoCamera::getVergenceAngle(){
+
+	double Angle=0;
+	return Angle;
+}
+
+
 //get the fundamental matrix relationship
 double StereoCamera::getFundamentalMatrix(cv::OutputArray FundamentalMatrix)
 {
@@ -56,6 +64,11 @@ double StereoCamera::getEsentialMatrix(cv::OutputArray EsentialMatrix)
 // internal methods implementation
 //////////////////////////////////////////////////////////////////////////////////////////
 
+
+StereoCamera::~StereoCamera()
+{
+
+}
 
 // calibrate the cameras
 void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSettingsFile)

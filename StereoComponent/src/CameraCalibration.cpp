@@ -3,14 +3,14 @@
 CameraCalibration::CameraCalibration() 
 {
 	clock_t prevTimestamp = 0;
-
 	
 }
 
-void CameraCalibration::help()
+CameraCalibration::~CameraCalibration()
 {
-	
+
 }
+
 
 int CameraCalibration::readSettings(string &inputSettingsFile)
 {
@@ -23,7 +23,7 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 	}
 	
 	fs["Settings"] >> s;
-	                                         // close Settings file
+	fs.release();                                         // close Settings file
 
 	if (!s.goodInput)
 	{
@@ -35,10 +35,11 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 
 
 /// static function that reads the settings file
+/// it overrides the >> operator for FileStorage
 /// @param[in] node FileNode to read from
 /// @param[out] Settings Settings to be saved from FileNode
 /// @param[in] default_value value by default if FileNode is empty
-static void read(const FileNode& node, Settings& x, const Settings& default_value=Settings())
+static void read(const FileNode& node, Settings& x, const Settings& default_value = Settings())
 {
 	if (node.empty()){
 		x = default_value;

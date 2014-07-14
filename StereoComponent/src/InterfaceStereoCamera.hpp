@@ -43,7 +43,7 @@ public:
 
 	/// Not default constructor instead use a virtual constructor
 	virtual InterfaceStereoCamera* Create() = 0;
-	virtual ~InterfaceStereoCamera();
+	virtual ~InterfaceStereoCamera(){};
 
 
 	/// get the actual status of the stereo head

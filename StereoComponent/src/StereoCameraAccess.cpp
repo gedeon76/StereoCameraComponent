@@ -2,5 +2,6 @@
 
 InterfaceStereoCamera *StereoCameraAccess::CreateStereoCamera()
 {
-	return new StereoCamera();
+	InterfaceStereoCamera *Obj = new StereoCamera();
+	return Obj;
 }
