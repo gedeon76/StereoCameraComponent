@@ -13,6 +13,7 @@ public:
 	InterfaceStereoCamera *Create(){ return new StereoCamera(); };
 	~StereoCamera();
 
+	void Init();
 	int getStereoCameraState();
 	void calibrateStereoCamera(string &leftSettingsFile, string &rightSettingsFile);
 	void getIntrinsicParameters(cv::OutputArray IntrinsicParameters);
@@ -34,6 +35,9 @@ private:
 	CameraCalibration rightCamera;
 	StereoCamera::StereoHeadState cameraGlobalStatus;
 
+
+	/// set the camera state
+	void setStereoCameraState(int cameraState, int value);
 
 	/// Calibrate the left and right cameras
 	void calibrateCameras(string &leftSettingsFile, string &rightSettingsFile);

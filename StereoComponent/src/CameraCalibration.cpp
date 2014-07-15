@@ -52,16 +52,22 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
 void CameraCalibration::getImagesAndFindPatterns()
 {
 	// set mode
-	mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;// check enum type
+	mode = CAPTURING;
+	//mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;// check enum type
 	
 	// Capture only the frames settled in the configuration file 
 	// in the original code it was a endless loop
-	for (int i = 0;i < s.nrFrames; ++i)
+	for (int i = 0;; ++i)
 	{
 		Mat view;
 		bool blinkOutput = false;
 
 		view = s.nextImage();
+
+		//------------------------- Show original distorted image -----------------------------------
+
+		Mat originalView = view.clone();
+		imshow("original Image", originalView);
 
 		//-----  If no more image, or got enough, then stop calibration and show result -------------
 		if (mode == CAPTURING && imagePoints.size() >= (unsigned)s.nrFrames)
@@ -125,12 +131,9 @@ void CameraCalibration::getImagesAndFindPatterns()
 			drawChessboardCorners(view, s.boardSize, Mat(pointBuf), found);
 		}
 
-		//////////////////////////////////////////////////////////////////////////////////////////
-		//  Change all this part, instead show at the end one distorted and one undistorted image
-
 		//----------------------------- Output Text ------------------------------------------------
 		string msg = (mode == CAPTURING) ? "100/100" :
-			mode == CALIBRATED ? "Calibrated" : "All images has been captured";
+			mode == CALIBRATED ? "Calibrated" : "the images are being captured";
 		int baseLine = 0;
 		Size textSize = getTextSize(msg, 1, 1, 1, &baseLine);
 		Point textOrigin(view.cols - 2 * textSize.width - 10, view.rows - 2 * baseLine - 10);
@@ -146,28 +149,25 @@ void CameraCalibration::getImagesAndFindPatterns()
 		putText(view, msg, textOrigin, 1, 1, mode == CALIBRATED ? GREEN : RED);
 
 		if (blinkOutput)
-			bitwise_not(view, view);
-
-		//------------------------- Show original distorted image -----------------------------------
-
-		if (i == s.nrFrames)
-		{
-			Mat originalView = view.clone();
-			imshow("original Image", originalView);
-
-		}
-
+			bitwise_not(view, view);			
+		
 		//------------------------- Video capture  output  undistorted ------------------------------
 		if (mode == CALIBRATED && s.showUndistorsed)
 		{
 			Mat temp = view.clone();
 			undistort(temp, view, cameraMatrix, distCoeffs);
+			string msgEsckey = "Press 'esc' key to quit";
+			putText(view, msgEsckey, textOrigin, 1, 1, GREEN, 2);
 		}
 
 		//------------------------------ Show image and check for input commands -------------------
-		imshow("Image View", view);
-
+		imshow("Undistorted View", view);
 		
+		char c = waitKey(1);
+
+		if (c == ESC_KEY)    //  Escape key
+			break;			// Breaks the capture loop
+
 	}
 
 }

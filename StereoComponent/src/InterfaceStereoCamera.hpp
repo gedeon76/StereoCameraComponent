@@ -37,14 +37,16 @@ public:
 
 	enum StereoHeadState
 	{
-		STEREO_NOT_CALIBRATED,	/**< Indicates that stereo camera has not been calibrated yet */
-		STEREO_CALIBRATED		/**< Indicates that stereo camera has been calibrated */
+		STEREO_NOT_CALIBRATED = 0,	/**< Indicates that stereo camera has not been calibrated yet */
+		STEREO_CALIBRATED = 1000	/**< Indicates that stereo camera has been calibrated */
 	};
 
 	/// Not default constructor instead use a virtual constructor
 	virtual InterfaceStereoCamera* Create() = 0;
 	virtual ~InterfaceStereoCamera(){};
 
+	/// Initializes the component
+	virtual void Init() = 0;
 
 	/// get the actual status of the stereo head
 	virtual int getStereoCameraState() = 0;

@@ -4,6 +4,13 @@
 // interface realization(implementation) for the API of this component
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+
+// Initialize method
+void StereoCamera::Init()
+{
+	cameraGlobalStatus = StereoHeadState::STEREO_NOT_CALIBRATED;
+}
+
 // get the calibration status
 int StereoCamera::getStereoCameraState()
 {
@@ -70,11 +77,17 @@ StereoCamera::~StereoCamera()
 
 }
 
+// set the state
+void StereoCamera::setStereoCameraState(int cameraState, int value)
+{
+	cameraState = value;
+}
+
 // calibrate the cameras
 void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSettingsFile)
 {
 	// start the calibration process
-	cameraGlobalStatus = StereoHeadState::STEREO_NOT_CALIBRATED;
+	int value = StereoHeadState::STEREO_NOT_CALIBRATED;	
 
 	// read the settings files for the left and right cameras
 	leftCamera.readSettings(leftSettingsFile);
@@ -85,7 +98,9 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	rightCamera.getImagesAndFindPatterns();
 
 	// set state to calibrated
-	cameraGlobalStatus = StereoHeadState::STEREO_CALIBRATED;
+	value = StereoHeadState::STEREO_CALIBRATED;
+	setStereoCameraState(cameraGlobalStatus, value);
+
 }
 
 
