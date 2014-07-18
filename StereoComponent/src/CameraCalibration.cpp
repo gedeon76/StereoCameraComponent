@@ -146,7 +146,7 @@ void CameraCalibration::getImagesAndFindPatterns()
 				msg = format("%d/%d", (int)imagePoints.size(), s.nrFrames);
 		}
 
-		putText(view, msg, textOrigin, 1, 1, mode == CALIBRATED ? GREEN : RED);
+		putText(view, msg, cvPoint(20,20), 1, 1, mode == CALIBRATED ? GREEN : RED);
 
 		if (blinkOutput)
 			bitwise_not(view, view);			

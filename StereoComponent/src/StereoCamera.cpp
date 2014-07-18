@@ -94,8 +94,19 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	rightCamera.readSettings(rightSettingsFile);
 
 	// run the calibration process for each camera
-	leftCamera.getImagesAndFindPatterns();
-	rightCamera.getImagesAndFindPatterns();
+
+	// store a call to the member function used for camera calibration calling from a thread
+	std::function<void(CameraCalibration)> threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
+
+	//threadCalibrateFunction(leftCamera);		
+	
+	std::thread t1(threadCalibrateFunction,leftCamera);
+	std::thread t2(threadCalibrateFunction,rightCamera);
+	
+	// call the thread
+	
+	//leftCamera.getImagesAndFindPatterns();
+	//rightCamera.getImagesAndFindPatterns();
 
 	// set state to calibrated
 	value = StereoHeadState::STEREO_CALIBRATED;

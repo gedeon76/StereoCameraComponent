@@ -57,5 +57,7 @@ private:
 	clock_t prevTimestamp;
 	const Scalar RED, GREEN;
 	const char ESC_KEY = 27;
+
+	
 	
 };

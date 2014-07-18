@@ -4,6 +4,9 @@
 #endif
 
 #include "InterfaceStereoCamera.hpp"
+// use c++11 standard features
+#include <functional>
+#include <thread>
 
 class StereoCamera : public InterfaceStereoCamera {
 
@@ -34,7 +37,6 @@ private:
 	CameraCalibration leftCamera;
 	CameraCalibration rightCamera;
 	StereoCamera::StereoHeadState cameraGlobalStatus;
-
 
 	/// set the camera state
 	void setStereoCameraState(int cameraState, int value);
