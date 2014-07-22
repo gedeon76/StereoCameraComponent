@@ -21,7 +21,7 @@ public:
 
 	int readSettings(string &inputSettingsFile);
 
-	void getImagesAndFindPatterns();
+	void getImagesAndFindPatterns(const string &cameraName);
 
 	double computeReprojectionErrors(vector<vector<Point3f>>& objectPoints, 
 									vector<vector<Point2f>>& imagePoints, 

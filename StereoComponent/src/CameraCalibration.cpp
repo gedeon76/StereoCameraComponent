@@ -49,7 +49,7 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
 	}
 }
 
-void CameraCalibration::getImagesAndFindPatterns()
+void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 {
 	// set mode
 	mode = CAPTURING;
@@ -67,7 +67,7 @@ void CameraCalibration::getImagesAndFindPatterns()
 		//------------------------- Show original distorted image -----------------------------------
 
 		Mat originalView = view.clone();
-		imshow("original Image", originalView);
+		//imshow("original Image", originalView);
 
 		//-----  If no more image, or got enough, then stop calibration and show result -------------
 		if (mode == CAPTURING && imagePoints.size() >= (unsigned)s.nrFrames)
@@ -161,7 +161,7 @@ void CameraCalibration::getImagesAndFindPatterns()
 		}
 
 		//------------------------------ Show image and check for input commands -------------------
-		imshow("Undistorted View", view);
+		imshow(cameraName, view);
 		
 		char c = waitKey(1);
 
