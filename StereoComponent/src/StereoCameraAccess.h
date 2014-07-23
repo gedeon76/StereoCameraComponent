@@ -1,68 +1,79 @@
 /*!  \brief
 
-	This class is the access door to the estereo camera interface
-	following the factory method pattern design
+	This class is the access door to the stereo camera interface
+	following the factory method pattern design for the API access
 	
 	the next lines shows an example of how to use this component
 	to get access to its functionalities
 	
 	 \code{.cpp}
+	 	 
 
-	 // include header
-	 #include "StereoCameraAccess.h"
+	//This project test the StereoCamera Component
+	//created for the purpose of calibrate a StereoHead
+	//that uses two logitech c270 webcams
 
-	 // create the component using the factory method pattern
-	 InterfaceStereoCamera  *StereoComponent = StereoCameraAccess::CreateStereoCamera();
-	 
-	 // create a camera state 
-	 StereoComponent::StereoCameraState CameraState;
-	 string leftCameraSettingsFile;
-	 string rightCameraSettingsFile;
+	#include "StereoCameraAccess.h"
 
-	 // define matrices to save the results of Stereo camera Component
-	 cv::OutputArray IntrinsicParameters;
-	 cv::OutputArray DistortionParameters;
-	 cv::OutputArray StereoTransforms;
-	 cv::OutputArray ProjectionMatrices;
-	 double VergenceAngle = 0;
-	 int CameraCalibrationStatus = 0;
-	 
-	 double ErrorFundamental=0,ErrorEsential=0;
-	 cv::OutputArray FundamentalMatrix;
-	 cv::OutputArray EsentialMatrix;
+	int main(int argc, char ** argv)
+	{
+		// create the component using the factory method pattern
+		StereoCameraAccess AccessObject;
+		InterfaceStereoCamera *StereoComponent = AccessObject.CreateStereoCamera();
+
+		// Initialize component
+		StereoComponent->Init();
+
+		// create a camera state
+		InterfaceStereoCamera::StereoHeadState CameraState;
+		string leftCameraSettingsFile;
+		string rightCameraSettingsFile;
+
+		// define OutputArrays to save the results of the StereoCamera Component
+		vector <cv::Mat> IntrinsicParameters;
+		vector <cv::Mat> DistortionParameters;
+		vector <cv::Mat> StereoTransforms;
+		vector <cv::Mat> ProjectionMatrices;
+		double VergenceAngle = 0;
+		int CameraCalibrationStatus = 0;
+
+		double ErrorFundamentalMatrix = 0, ErrorEsentialMatrix = 0;
+		cv::Mat FundamentalMatrix;
+		cv::Mat EsentialMatrix;
+
+		// call the methods from the StereoCamera Component
+
+		// check the camera state
+
+		CameraCalibrationStatus = StereoComponent->getStereoCameraState();
+
+		if (CameraCalibrationStatus == InterfaceStereoCamera::STEREO_NOT_CALIBRATED)
+		{
+			// read the .xml configuration files for the cameras
+			leftCameraSettingsFile.assign("C:/Code/UMLCode/StereoComponent/src/Left_Setup_c270.xml");
+			rightCameraSettingsFile.assign("C:/Code/UMLCode/StereoComponent/src/Right_Setup_c270.xml");
+
+			// call the calibration process
+			StereoComponent->calibrateStereoCamera(leftCameraSettingsFile, rightCameraSettingsFile);
+
+		}
+
+		CameraCalibrationStatus = StereoComponent->getStereoCameraState();
+
+		if (CameraCalibrationStatus == InterfaceStereoCamera::STEREO_CALIBRATED)
+		{
+			// get the results
+			StereoComponent->getIntrinsicParameters(IntrinsicParameters);
+			StereoComponent->getDistortionParameters(DistortionParameters);
+			StereoComponent->getProjectionMatrices(ProjectionMatrices);
+			StereoComponent->getStereoTransforms(StereoTransforms);
+		}
 
 
+		delete StereoComponent;
 
-	 // call the component functions to get the different parameters and matrices
-
-	 // call this only one time or when you change the cameras position or rotation
-	 CameraCalibrationStatus = StereoComponent->getStereoCameraState();
-
-	 if (CameraCalibrationStatus == CameraState::STEREO_NOT_CALIBRATED){
-
-		// read the .xml configuration files
-		leftCameraSettingsFile.assign("Path_to_myLeftCameraSettings.xml");
-		rightCameraSettingsFile.assign("Path_to_myRightCameraSettings.xml");
-
-		// call the calibration process
-		StereoComponent->calibrateStereoCamera(leftCameraSettingsFile,rightCameraSettingsFile);	
-	 }
-
-	 if (CameraCalibrationStatus == CameraState::STEREO_CALIBRATED){
-	
-		StereoComponent->getIntrinsicParameters(IntrinsicParameters);
-		StereoComponent->getDistortionParameters(DistortionParameters);
-		StereoComponent->getProjectionMatrices(ProjectionMatrices);
-		StereoComponent->getStereoTransforms(StereoTransforms);
-		VergenceAngle = StereoComponent->getVergenceAngle();
-
-		ErrorFundamental = StereoComponent->getFundamentalMatrix(FundamentalMatrix);
-		ErrorEsential = StereoComponent->getEsentialMatrix(EsentialMatrix);
-
-	 }
-
-
-	 
+		return 0;
+	}
 
 	 \endcode
 

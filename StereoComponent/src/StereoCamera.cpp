@@ -104,11 +104,11 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	const string leftCameraName("leftCamera");
 	const string rightCameraName("rightCamera");
 
-	std::thread t1(threadCalibrateFunction, leftCamera,leftCameraName);
-	std::thread t2(threadCalibrateFunction, rightCamera,rightCameraName);
+	std::thread threadForLeftCalibration(threadCalibrateFunction, leftCamera,leftCameraName);
+	std::thread threadForRightCalibration(threadCalibrateFunction, rightCamera, rightCameraName);
 
-	t1.join();
-	t2.join();
+	threadForLeftCalibration.join();
+	threadForRightCalibration.join();
 	
 	//leftCamera.getImagesAndFindPatterns();
 	//rightCamera.getImagesAndFindPatterns();
