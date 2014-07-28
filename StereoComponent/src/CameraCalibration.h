@@ -21,6 +21,9 @@ public:
 
 	int readSettings(string &inputSettingsFile);
 
+	// read the results from the calibration process and save it into a FileStorage structure
+	int readResults(string &outputResultsFile) const;
+
 	void getImagesAndFindPatterns(const string &cameraName);
 
 	double computeReprojectionErrors(vector<vector<Point3f>>& objectPoints, 
@@ -43,6 +46,12 @@ public:
 
 	bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, 
 						Mat& distCoeffs, vector<vector<Point2f>> imagePoints);
+
+	// get the intrinsic calibration matrix found for this camera
+	void getIntrinsicMatrix(Mat &intrinsicMatrix);
+
+	// get the distortion parameters found for this camera
+	void getDistortionParameters(Mat &distortionParametersMatrix);
 
 
 

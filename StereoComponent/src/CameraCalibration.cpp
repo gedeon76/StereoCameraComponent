@@ -33,6 +33,24 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 	
 }
 
+int CameraCalibration::readResults(string &outputResultsFile) const
+{
+	Mat intrinsicMatrix, distortionCoefficients;
+	
+	FileStorage fs(outputResultsFile,FileStorage::READ);	// read the results file
+	if (!fs.isOpened())
+	{
+		cout << "Could not open the results file \"" << outputResultsFile << "\"" << endl;
+		return -1;
+	}
+
+	
+	fs["Camera_Matrix"] >> intrinsicMatrix;
+	fs["Distortion_Coefficients"] >> distortionCoefficients;
+
+	fs.release();
+
+}
 
 /// static function that reads the settings file
 /// it overrides the >> operator for FileStorage
@@ -349,4 +367,17 @@ bool CameraCalibration::runCalibrationAndSave(Settings& s, Size imageSize, Mat& 
 		saveCameraParams(s, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, reprojErrs,
 		imagePoints, totalAvgErr);
 	return ok;
+}
+
+void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
+{
+	Mat intrinsicFound = cameraMatrix.clone();
+	intrinsicMatrix = intrinsicFound;
+}
+
+void CameraCalibration::getDistortionParameters(Mat &distortionCameraParameters)
+{
+	Mat dst = distCoeffs.clone();	
+	distortionCameraParameters = dst;
+	
 }

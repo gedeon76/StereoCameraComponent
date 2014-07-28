@@ -29,19 +29,19 @@ void StereoCamera::calibrateStereoCamera(string &leftSettingsFile, string &right
 }
 
 // get the intrinsic parameters
-void StereoCamera::getIntrinsicParameters(cv::OutputArray IntrinsicParameters)
+void StereoCamera::getIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
 {
-	int i = 0;
+	readIntrinsicParameters(IntrinsicParameters);
 }
 
 // get the distortion parameters
-void StereoCamera::getDistortionParameters(cv::OutputArray DistortionMatrices){}
+void StereoCamera::getDistortionParameters(cv::OutputArray &DistortionMatrices){}
 
 // get the transforms between cameras
-void StereoCamera::getStereoTransforms(cv::OutputArray StereoTransforms){}
+void StereoCamera::getStereoTransforms(cv::OutputArray &StereoTransforms){}
 
 // get the projection matrix for each camera 
-void StereoCamera::getProjectionMatrices(cv::OutputArray ProjectionMatrices){}
+void StereoCamera::getProjectionMatrices(cv::OutputArray &ProjectionMatrices){}
 
 // get the vergence angle
 double StereoCamera::getVergenceAngle(){
@@ -99,7 +99,7 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	// This calling will be used as the thread callable function parameter with its arguments
 	std::function<void(CameraCalibration,const string&)> threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
 
-	//call the threads for camera calibration	
+	//create two threads for camera calibration	
 	
 	const string leftCameraName("leftCamera");
 	const string rightCameraName("rightCamera");
@@ -110,15 +110,28 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	threadForLeftCalibration.join();
 	threadForRightCalibration.join();
 	
-	//leftCamera.getImagesAndFindPatterns();
-	//rightCamera.getImagesAndFindPatterns();
-
 	// set state to calibrated
 	value = StereoHeadState::STEREO_CALIBRATED;
 	setStereoCameraState(cameraGlobalStatus, value);
 
 }
 
+
+// read the intrinsic parameters from the calibration results 
+void StereoCamera::readIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
+{
+	Mat K_left, K_right;
+	vector<Mat> K_matrices;
+	
+	leftCamera.getIntrinsicMatrix(K_left);
+	rightCamera.getIntrinsicMatrix(K_right);
+
+	K_matrices.push_back(K_left);
+	K_matrices.push_back(K_right);
+
+	Mat(K_matrices).copyTo(IntrinsicParameters);
+
+}
 
 // find matches on the left and right images
 void StereoCamera::findMatches() {
