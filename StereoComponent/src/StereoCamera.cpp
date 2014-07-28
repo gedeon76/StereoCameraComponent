@@ -35,7 +35,10 @@ void StereoCamera::getIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
 }
 
 // get the distortion parameters
-void StereoCamera::getDistortionParameters(cv::OutputArray &DistortionMatrices){}
+void StereoCamera::getDistortionParameters(cv::OutputArray &DistortionMatrices)
+{
+	readDistortionParameters(DistortionMatrices);
+}
 
 // get the transforms between cameras
 void StereoCamera::getStereoTransforms(cv::OutputArray &StereoTransforms){}
@@ -118,7 +121,7 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 
 // read the intrinsic parameters from the calibration results 
-void StereoCamera::readIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
+void StereoCamera::readIntrinsicParameters(cv::OutputArray &intrinsicParameters)
 {
 	Mat K_left, K_right;
 	vector<Mat> K_matrices;
@@ -129,9 +132,26 @@ void StereoCamera::readIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
 	K_matrices.push_back(K_left);
 	K_matrices.push_back(K_right);
 
-	Mat(K_matrices).copyTo(IntrinsicParameters);
+	Mat(K_matrices).copyTo(intrinsicParameters);
 
 }
+
+// read the distortion parameters from the calibration results
+void StereoCamera::readDistortionParameters(cv::OutputArray &DistortionMatrices)
+{
+	Mat D_left, D_right;
+	vector<Mat> D_matrices;
+
+	leftCamera.getDistortionMatrix(D_left);
+	rightCamera.getDistortionMatrix(D_right);
+
+	D_matrices.push_back(D_left);
+	D_matrices.push_back(D_right);
+
+	Mat(D_matrices).copyTo(DistortionMatrices);
+
+}
+
 
 // find matches on the left and right images
 void StereoCamera::findMatches() {

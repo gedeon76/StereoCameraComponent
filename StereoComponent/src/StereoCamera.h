@@ -48,7 +48,10 @@ private:
 	void calibrateCameras(string &leftSettingsFile, string &rightSettingsFile);
 
 	/// Read the intrinsic parameter
-	void readIntrinsicParameters(cv::OutputArray &IntrinsicParameters);
+	void readIntrinsicParameters(cv::OutputArray &intrinsicParameters);
+
+	/// Read the distortion parameter
+	void readDistortionParameters(cv::OutputArray &distortionParameters);
 
 	/// Find the similar matches between the images of each camera
 	void findMatches();

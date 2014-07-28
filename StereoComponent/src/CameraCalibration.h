@@ -51,7 +51,7 @@ public:
 	void getIntrinsicMatrix(Mat &intrinsicMatrix);
 
 	// get the distortion parameters found for this camera
-	void getDistortionParameters(Mat &distortionParametersMatrix);
+	void getDistortionMatrix(Mat &distortionParametersMatrix);
 
 
 

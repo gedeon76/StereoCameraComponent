@@ -375,7 +375,7 @@ void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
 	intrinsicMatrix = intrinsicFound;
 }
 
-void CameraCalibration::getDistortionParameters(Mat &distortionCameraParameters)
+void CameraCalibration::getDistortionMatrix(Mat &distortionCameraParameters)
 {
 	Mat dst = distCoeffs.clone();	
 	distortionCameraParameters = dst;
