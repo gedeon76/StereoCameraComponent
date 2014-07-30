@@ -9,7 +9,10 @@
 
 // include settings structure class
 #include "Settings.h"
+#include "commonStereoComponent.h"
 
+
+typedef cameraUsefulData cameraData;
 
 class CameraCalibration {
 
@@ -50,8 +53,12 @@ public:
 	// get the intrinsic calibration matrix found for this camera
 	void getIntrinsicMatrix(Mat &intrinsicMatrix);
 
+	void getCameraUsefulParameters(cameraData &cameraUsefulParameters);
+
 	// get the distortion parameters found for this camera
 	void getDistortionMatrix(Mat &distortionParametersMatrix);
+
+
 
 
 
@@ -66,7 +73,6 @@ private:
 	clock_t prevTimestamp;
 	const Scalar RED, GREEN;
 	const char ESC_KEY = 27;
-
-	
+	cameraData cameraUsefulParameters;		
 	
 };

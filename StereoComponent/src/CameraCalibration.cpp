@@ -375,6 +375,29 @@ void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
 	intrinsicMatrix = intrinsicFound;
 }
 
+void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParameters)
+{
+	Size imageSize;
+	double sensorWidth, sensorHeight, fov_X, fov_Y, focalLength, aspectRatio;
+	Point2d principalPoint;
+
+	Mat intrinsicFound = cameraMatrix.clone();
+	calibrationMatrixValues(intrinsicFound, imageSize, 
+		sensorWidth, sensorHeight, fov_X, fov_Y, focalLength, principalPoint, aspectRatio);
+
+	cameraUsefulParameters.imageWidth = imageSize.width;
+	cameraUsefulParameters.imageHeight = imageSize.height;
+	cameraUsefulParameters.sensorWidth = sensorWidth;
+	cameraUsefulParameters.sensorHeight = sensorHeight;
+	cameraUsefulParameters.fov_X = fov_X;
+	cameraUsefulParameters.fov_Y = fov_Y;
+	cameraUsefulParameters.focalLength = focalLength;
+	cameraUsefulParameters.principalPointX = principalPoint.x;
+	cameraUsefulParameters.principalPointY = principalPoint.y;
+	cameraUsefulParameters.aspectRatio = aspectRatio;
+
+}
+
 void CameraCalibration::getDistortionMatrix(Mat &distortionCameraParameters)
 {
 	Mat dst = distCoeffs.clone();	

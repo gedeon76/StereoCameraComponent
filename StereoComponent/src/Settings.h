@@ -32,6 +32,7 @@ using namespace std;
 /// @param[in] l list of names of the images
 bool readStringList(const string& filename, vector<string>& l);
 
+
 class Settings {
 
 public:
@@ -55,7 +56,7 @@ public:
 	string outputFileName;					// The name of the file where to write
 	bool showUndistorsed;					// Show undistorted images after calibration
 	string input;							// The input ->
-
+	
 	int cameraID;
 	vector<string> imageList;
 	int atImageList;

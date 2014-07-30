@@ -29,6 +29,7 @@
 
 // include opencv dependency
 #include <opencv2/core/core.hpp>
+#include "commonStereoComponent.h"
 
 class InterfaceStereoCamera {
 
@@ -66,6 +67,11 @@ public:
 	/// k1,k2,k3 for radial distortion and p1 and p2 for tangencial distortion.
 	/// DistortionMatrices contains the parameters for the left and right cameras
 	virtual void getDistortionParameters(cv::OutputArray &DistortionMatrices) = 0;
+
+	/// get some useful parameters from the intrinsic matrix found after the calibration process
+	/// @param[in,out] CameraParameters It contains some useful camera parameters
+	/// as image size, sensor information, field of view, aspect ratio, principal point and focal length
+	virtual void getCameraUsefulParameters(cameraParameters &CameraUsefulParameters) = 0;
 
 	/// get the Rotation and traslation between the first and second camera
 	/// @param[in,out] StereoTransforms It contains the 3x3 rotation matrix  and  3x1 traslation matrix 

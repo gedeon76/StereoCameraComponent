@@ -22,6 +22,7 @@ public:
 	int getStereoCameraState();
 	void calibrateStereoCamera(string &leftSettingsFile, string &rightSettingsFile);
 	void getIntrinsicParameters(cv::OutputArray &IntrinsicParameters);
+	void getCameraUsefulParameters(cameraParameters &cameraUsefulParameters);
 	void getDistortionParameters(cv::OutputArray &DistortionMatrices);
 	void getStereoTransforms(cv::OutputArray &StereoTransforms);
 	void getProjectionMatrices(cv::OutputArray &ProjectionMatrices);
@@ -47,10 +48,13 @@ private:
 	/// Calibrate the left and right cameras
 	void calibrateCameras(string &leftSettingsFile, string &rightSettingsFile);
 
-	/// Read the intrinsic parameter
+	/// Read the intrinsic parameters for the left and right cameras
 	void readIntrinsicParameters(cv::OutputArray &intrinsicParameters);
 
-	/// Read the distortion parameter
+	/// Read some useful camera parameters for the left and right cameras
+	void readCameraUsefulParameters(cameraParameters &camerausefulParameters);
+
+	/// Read the distortion parameters for the left and right cameras
 	void readDistortionParameters(cv::OutputArray &distortionParameters);
 
 	/// Find the similar matches between the images of each camera

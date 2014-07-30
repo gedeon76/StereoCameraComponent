@@ -34,6 +34,12 @@ void StereoCamera::getIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
 	readIntrinsicParameters(IntrinsicParameters);
 }
 
+// get some useful camera parameters
+void StereoCamera::getCameraUsefulParameters(cameraParameters &cameraParameters)
+{
+	readCameraUsefulParameters(cameraParameters);
+}
+
 // get the distortion parameters
 void StereoCamera::getDistortionParameters(cv::OutputArray &DistortionMatrices)
 {
@@ -134,6 +140,18 @@ void StereoCamera::readIntrinsicParameters(cv::OutputArray &intrinsicParameters)
 
 	Mat(K_matrices).copyTo(intrinsicParameters);
 
+}
+
+// read some useful parameters from the calibration results
+void StereoCamera::readCameraUsefulParameters(cameraParameters &cameraUsefulParameters)
+{
+	cameraData Data_Left, Data_Right;
+
+	leftCamera.getCameraUsefulParameters(Data_Left);
+	rightCamera.getCameraUsefulParameters(Data_Right);
+
+	cameraUsefulParameters.push_back(Data_Left);
+	cameraUsefulParameters.push_back(Data_Right);
 }
 
 // read the distortion parameters from the calibration results
