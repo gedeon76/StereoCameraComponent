@@ -9,7 +9,9 @@
 
 // include settings structure class
 #include "Settings.h"
+#include "Results.h"
 #include "commonStereoComponent.h"
+#include <memory>
 
 
 typedef cameraUsefulData cameraData;
@@ -25,7 +27,7 @@ public:
 	int readSettings(string &inputSettingsFile);
 
 	// read the results from the calibration process and save it into a FileStorage structure
-	int readResults(string &outputResultsFile) const;
+	int readResults(string &outputResultsFile);
 
 	void getImagesAndFindPatterns(const string &cameraName);
 
@@ -65,9 +67,11 @@ public:
 private:
 
 	Settings s;
+	Results calibrationResults;
 	string  inputSettingsFile;
 	vector<vector<Point2f> > imagePoints;
 	Mat cameraMatrix, distCoeffs;
+	Mat intrinsicK_Matrix, distortionCoefficients;
 	Size imageSize;
 	int mode;
 	clock_t prevTimestamp;

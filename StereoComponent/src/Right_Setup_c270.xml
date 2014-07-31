@@ -25,7 +25,7 @@
   <Input_Delay>5000</Input_Delay>	
   
   <!-- How many frames to use, for calibration. -->
-  <Calibrate_NrOfFrameToUse>15</Calibrate_NrOfFrameToUse>
+  <Calibrate_NrOfFrameToUse>10</Calibrate_NrOfFrameToUse>
   <!-- Consider only fy as a free parameter, the ratio fx/fy stays the same as in the input cameraMatrix. 
 	   Use or not setting. 0 - False Non-Zero - True-->
   <Calibrate_FixAspectRatio> 0 </Calibrate_FixAspectRatio>

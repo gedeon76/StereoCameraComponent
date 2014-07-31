@@ -39,11 +39,11 @@ private:
 	string rightInputSettingsFile;
 	CameraCalibration leftCamera;
 	CameraCalibration rightCamera;
-	StereoCamera::StereoHeadState cameraGlobalStatus;
+	int cameraGlobalStatus;
 
 
 	/// set the camera state
-	void setStereoCameraState(int cameraState, int value);
+	void setStereoCameraState(int value);
 
 	/// Calibrate the left and right cameras
 	void calibrateCameras(string &leftSettingsFile, string &rightSettingsFile);

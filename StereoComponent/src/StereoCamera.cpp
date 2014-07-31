@@ -20,11 +20,16 @@ int StereoCamera::getStereoCameraState()
 // calibrate the cameras
 void StereoCamera::calibrateStereoCamera(string &leftSettingsFile, string &rightSettingsFile) {
 
+	int value = 0;
 	leftInputSettingsFile.assign(leftSettingsFile);
 	rightInputSettingsFile.assign(rightSettingsFile);
 
 	// call the calibration
 	calibrateCameras(leftInputSettingsFile, rightInputSettingsFile);
+
+	// set state to calibrated
+	value = StereoHeadState::STEREO_CALIBRATED;
+	setStereoCameraState(value);
 
 }
 
@@ -87,9 +92,9 @@ StereoCamera::~StereoCamera()
 }
 
 // set the state
-void StereoCamera::setStereoCameraState(int cameraState, int value)
+void StereoCamera::setStereoCameraState(int value)
 {
-	cameraState = value;
+	cameraGlobalStatus = value;
 }
 
 // calibrate the cameras
@@ -118,10 +123,13 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 	threadForLeftCalibration.join();
 	threadForRightCalibration.join();
-	
-	// set state to calibrated
-	value = StereoHeadState::STEREO_CALIBRATED;
-	setStereoCameraState(cameraGlobalStatus, value);
+
+	// read the results from xml files
+	string leftResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Left_Camera.xml");
+	string rightResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Right_Camera.xml");
+
+	leftCamera.readResults(leftResultsFile);
+	rightCamera.readResults(rightResultsFile);
 
 }
 
@@ -129,7 +137,8 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 // read the intrinsic parameters from the calibration results 
 void StereoCamera::readIntrinsicParameters(cv::OutputArray &intrinsicParameters)
 {
-	Mat K_left, K_right;
+	Mat K_left = Mat::eye(3,3,CV_64F);
+	Mat K_right = Mat::eye(3,3,CV_64F);
 	vector<Mat> K_matrices;
 	
 	leftCamera.getIntrinsicMatrix(K_left);

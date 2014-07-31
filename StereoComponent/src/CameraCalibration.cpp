@@ -3,6 +3,8 @@
 CameraCalibration::CameraCalibration() 
 {
 	clock_t prevTimestamp = 0;
+	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
+	distortionCoefficients = Mat::zeros(8, 1, CV_64F);
 	
 }
 
@@ -12,48 +14,14 @@ CameraCalibration::~CameraCalibration()
 }
 
 
-int CameraCalibration::readSettings(string &inputSettingsFile)
-{
-	
-	FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
-	if (!fs.isOpened())
-	{
-		cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
-		return -1;
-	}
-	
-	fs["Settings"] >> s;
-	fs.release();                                         // close Settings file
+/*
+	The next static functions are defined to serialize the xml files according
+	to OpenCV documentation under the title:
 
-	if (!s.goodInput)
-	{
-		cout << "Invalid input detected. Application stopping. " << endl;
-		return -1;
-	}
-	
-}
-
-int CameraCalibration::readResults(string &outputResultsFile) const
-{
-	Mat intrinsicMatrix, distortionCoefficients;
-	
-	FileStorage fs(outputResultsFile,FileStorage::READ);	// read the results file
-	if (!fs.isOpened())
-	{
-		cout << "Could not open the results file \"" << outputResultsFile << "\"" << endl;
-		return -1;
-	}
-
-	
-	fs["Camera_Matrix"] >> intrinsicMatrix;
-	fs["Distortion_Coefficients"] >> distortionCoefficients;
-
-	fs.release();
-
-}
+	File Input and Output using XML and YAML files
+*/
 
 /// static function that reads the settings file
-/// it overrides the >> operator for FileStorage
 /// @param[in] node FileNode to read from
 /// @param[out] Settings Settings to be saved from FileNode
 /// @param[in] default_value value by default if FileNode is empty
@@ -65,6 +33,64 @@ static void read(const FileNode& node, Settings& x, const Settings& default_valu
 	else{
 		x.read(node);
 	}
+}
+
+/// static function that reads the results file
+/// @param[in] node FileNode to read from
+/// @param[out] Results result to be saved from FileNode
+/// @param[in] default_value value by default if FileNode is empty
+static void read(const FileNode& node, Results& result,const Results& default_value = Results())
+{
+	if (node.empty())
+	{
+		result = default_value;
+	} else
+	{
+		result.read(node);
+	}
+}
+
+/// static function that writes the results file
+static  void write(FileStorage& fs, const string&,const Results& result)
+{
+	result.write(fs);
+}
+
+
+int CameraCalibration::readSettings(string &inputSettingsFile)
+{
+
+	FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
+	if (!fs.isOpened())
+	{
+		cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
+		return -1;
+	}
+
+	fs["Settings"] >> s;
+	fs.release();                                         // close Settings file
+
+	if (!s.goodInput)
+	{
+		cout << "Invalid input detected. Application stopping. " << endl;
+		return -1;
+	}
+
+}
+
+int CameraCalibration::readResults(string &outputResultsFile) 
+{
+
+	FileStorage fs(outputResultsFile, FileStorage::READ);	// read the results file
+	if (!fs.isOpened())
+	{
+		cout << "Could not open the results file \"" << outputResultsFile << "\"" << endl;
+		return -1;
+	}
+
+	fs["Results"] >> calibrationResults;	
+	fs.release();
+
 }
 
 void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
@@ -276,7 +302,6 @@ void CameraCalibration::saveCameraParams(Settings& s, Size& imageSize, Mat& came
 									vector<float>& reprojErrs, vector<vector<Point2f>>& imagePoints,
 									double totalAvgErr) 
 {
-	
 	FileStorage fs(s.outputFileName, FileStorage::WRITE);
 
 	time_t tm;
@@ -285,7 +310,8 @@ void CameraCalibration::saveCameraParams(Settings& s, Size& imageSize, Mat& came
 	char buf[1024];
 	strftime(buf, sizeof(buf) - 1, "%c", t2);
 
-	fs << "calibration_Time" << buf;
+	fs << "Results"; 
+	fs << "{" <<"calibration_Time" << buf;
 
 	if (!rvecs.empty() || !reprojErrs.empty())
 		fs << "nrOfFrames" << (int)std::max(rvecs.size(), reprojErrs.size());
@@ -346,8 +372,10 @@ void CameraCalibration::saveCameraParams(Settings& s, Size& imageSize, Mat& came
 			Mat imgpti(imagePoints[i]);
 			imgpti.copyTo(r);
 		}
-		fs << "Image_points" << imagePtMat;
+		fs << "Image_points" << imagePtMat << "}";
+		
 	}
+		
 }
 
 bool CameraCalibration::runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, 
@@ -371,17 +399,29 @@ bool CameraCalibration::runCalibrationAndSave(Settings& s, Size imageSize, Mat& 
 
 void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
 {
-	Mat intrinsicFound = cameraMatrix.clone();
-	intrinsicMatrix = intrinsicFound;
+	
+	cout << "original K \n" << calibrationResults.intrinsicCameraMatrix << endl;
+	cout << "original Dist \n" << calibrationResults.distortionCoefficients << endl;
+
+	intrinsicK_Matrix = calibrationResults.intrinsicCameraMatrix.clone();
+	intrinsicK_Matrix.copyTo(intrinsicMatrix);
+
+	cout << "K_copy \n" << intrinsicK_Matrix << endl;
+
+
 }
 
 void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParameters)
 {
 	Size imageSize;
-	double sensorWidth, sensorHeight, fov_X, fov_Y, focalLength, aspectRatio;
+	imageSize.width = calibrationResults.imageWidth;
+	imageSize.height = calibrationResults.imageHeight;
+
+	double sensorWidth = 1, sensorHeight = 1;
+	double fov_X, fov_Y, focalLength, aspectRatio;
 	Point2d principalPoint;
 
-	Mat intrinsicFound = cameraMatrix.clone();
+	Mat intrinsicFound = calibrationResults.intrinsicCameraMatrix.clone();
 	calibrationMatrixValues(intrinsicFound, imageSize, 
 		sensorWidth, sensorHeight, fov_X, fov_Y, focalLength, principalPoint, aspectRatio);
 
@@ -400,7 +440,7 @@ void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParame
 
 void CameraCalibration::getDistortionMatrix(Mat &distortionCameraParameters)
 {
-	Mat dst = distCoeffs.clone();	
-	distortionCameraParameters = dst;
+	distortionCoefficients = calibrationResults.distortionCoefficients.clone();
+	distortionCoefficients.copyTo(distortionCameraParameters);
 	
 }

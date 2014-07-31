@@ -1,10 +1,11 @@
 /*! \brief
 	
 	This is the settings class used
-	for the camera calibration on OpenCV
+	for reading the xml camera calibration  configuration files 
 	
 */
 
+#pragma once
 
 // include OpenCV headers
 #include <iostream>
@@ -42,19 +43,19 @@ public:
 	enum InputType {
 		INVALID, CAMERA, VIDEO_FILE, IMAGE_LIST
 	};
-	Size boardSize;							// The size of the board -> Number of items by width and height
-	Settings::Pattern calibrationPattern;	// One of the Chessboard, circles, or asymmetric circle pattern
-	float squareSize;						// The size of a square in your defined unit (point, millimeter,etc).			
-	int nrFrames;							// The number of frames to use from the input for calibration 
-	float aspectRatio;						// The aspect ratio
-	int delay;								// In case of a video input
+	Size boardSize;							///< The size of the board -> Number of items by width and height
+	Settings::Pattern calibrationPattern;	///< One of the Chessboard, circles, or asymmetric circle pattern
+	float squareSize;						///< The size of a square in your defined unit (point, millimeter,etc).			
+	int nrFrames;							///< The number of frames to use from the input for calibration 
+	float aspectRatio;						///< The aspect ratio
+	int delay;								///< In case of a video input, delay between captures
 	bool bwritePoints;						
-	bool bwriteExtrinsics;					// Write extrinsic parameters			
-	bool calibZeroTangentDist;				// Assume zero tangential distortion
-	bool calibFixPrincipalPoint;			// Fix the principal point at the center
-	bool flipVertical;						// Flip the captured images around the horizontal axis
-	string outputFileName;					// The name of the file where to write
-	bool showUndistorsed;					// Show undistorted images after calibration
+	bool bwriteExtrinsics;					///< Write extrinsic parameters			
+	bool calibZeroTangentDist;				///< Assume zero tangential distortion
+	bool calibFixPrincipalPoint;			///< Fix the principal point at the center
+	bool flipVertical;						///< Flip the captured images around the horizontal axis
+	string outputFileName;					///< The name of the file where to write
+	bool showUndistorsed;					///< Show undistorted images after calibration
 	string input;							// The input ->
 	
 	int cameraID;
