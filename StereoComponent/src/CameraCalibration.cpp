@@ -400,14 +400,8 @@ bool CameraCalibration::runCalibrationAndSave(Settings& s, Size imageSize, Mat& 
 void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
 {
 	
-	cout << "original K \n" << calibrationResults.intrinsicCameraMatrix << endl;
-	cout << "original Dist \n" << calibrationResults.distortionCoefficients << endl;
-
 	intrinsicK_Matrix = calibrationResults.intrinsicCameraMatrix.clone();
 	intrinsicK_Matrix.copyTo(intrinsicMatrix);
-
-	cout << "K_copy \n" << intrinsicK_Matrix << endl;
-
 
 }
 
@@ -417,7 +411,8 @@ void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParame
 	imageSize.width = calibrationResults.imageWidth;
 	imageSize.height = calibrationResults.imageHeight;
 
-	double sensorWidth = 1, sensorHeight = 1;
+	// logitech c270 corresponding to 1/4" sensor
+	double sensorWidth = 3.2, sensorHeight = 2.4;
 	double fov_X, fov_Y, focalLength, aspectRatio;
 	Point2d principalPoint;
 

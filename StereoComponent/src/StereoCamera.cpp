@@ -34,7 +34,7 @@ void StereoCamera::calibrateStereoCamera(string &leftSettingsFile, string &right
 }
 
 // get the intrinsic parameters
-void StereoCamera::getIntrinsicParameters(cv::OutputArray &IntrinsicParameters)
+void StereoCamera::getIntrinsicParameters(vector<cv::Mat> &IntrinsicParameters)
 {
 	readIntrinsicParameters(IntrinsicParameters);
 }
@@ -46,16 +46,16 @@ void StereoCamera::getCameraUsefulParameters(cameraParameters &cameraParameters)
 }
 
 // get the distortion parameters
-void StereoCamera::getDistortionParameters(cv::OutputArray &DistortionMatrices)
+void StereoCamera::getDistortionParameters(vector<cv::Mat> &DistortionMatrices)
 {
 	readDistortionParameters(DistortionMatrices);
 }
 
 // get the transforms between cameras
-void StereoCamera::getStereoTransforms(cv::OutputArray &StereoTransforms){}
+void StereoCamera::getStereoTransforms(vector<cv::Mat> &StereoTransforms){}
 
 // get the projection matrix for each camera 
-void StereoCamera::getProjectionMatrices(cv::OutputArray &ProjectionMatrices){}
+void StereoCamera::getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices){}
 
 // get the vergence angle
 double StereoCamera::getVergenceAngle(){
@@ -66,7 +66,7 @@ double StereoCamera::getVergenceAngle(){
 
 
 //get the fundamental matrix relationship
-double StereoCamera::getFundamentalMatrix(cv::OutputArray FundamentalMatrix)
+double StereoCamera::getFundamentalMatrix(cv::Mat &FundamentalMatrix)
 {
 	double Error = 0;
 	return Error;
@@ -74,7 +74,7 @@ double StereoCamera::getFundamentalMatrix(cv::OutputArray FundamentalMatrix)
 }
 
 // get the esential matrix relationship
-double StereoCamera::getEsentialMatrix(cv::OutputArray EsentialMatrix)
+double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 {
 	double Error = 0;
 	return Error;
@@ -111,18 +111,18 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 	// store a call to the member function used for camera calibration. 
 	// This calling will be used as the thread callable function parameter with its arguments
-	std::function<void(CameraCalibration,const string&)> threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
+//	std::function<void(CameraCalibration,const string&)> threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
 
 	//create two threads for camera calibration	
 	
 	const string leftCameraName("leftCamera");
 	const string rightCameraName("rightCamera");
 
-	std::thread threadForLeftCalibration(threadCalibrateFunction, leftCamera,leftCameraName);
-	std::thread threadForRightCalibration(threadCalibrateFunction, rightCamera, rightCameraName);
+//	std::thread threadForLeftCalibration(threadCalibrateFunction, leftCamera,leftCameraName);
+//	std::thread threadForRightCalibration(threadCalibrateFunction, rightCamera, rightCameraName);
 
-	threadForLeftCalibration.join();
-	threadForRightCalibration.join();
+//	threadForLeftCalibration.join();
+//	threadForRightCalibration.join();
 
 	// read the results from xml files
 	string leftResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Left_Camera.xml");
@@ -135,20 +135,17 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 
 // read the intrinsic parameters from the calibration results 
-void StereoCamera::readIntrinsicParameters(cv::OutputArray &intrinsicParameters)
+void StereoCamera::readIntrinsicParameters(vector<cv::Mat> &intrinsicParameters)
 {
 	Mat K_left = Mat::eye(3,3,CV_64F);
 	Mat K_right = Mat::eye(3,3,CV_64F);
-	vector<Mat> K_matrices;
-	
+		
 	leftCamera.getIntrinsicMatrix(K_left);
 	rightCamera.getIntrinsicMatrix(K_right);
 
-	K_matrices.push_back(K_left);
-	K_matrices.push_back(K_right);
-
-	Mat(K_matrices).copyTo(intrinsicParameters);
-
+	intrinsicParameters.push_back(K_left);
+	intrinsicParameters.push_back(K_right);
+	
 }
 
 // read some useful parameters from the calibration results
@@ -164,19 +161,17 @@ void StereoCamera::readCameraUsefulParameters(cameraParameters &cameraUsefulPara
 }
 
 // read the distortion parameters from the calibration results
-void StereoCamera::readDistortionParameters(cv::OutputArray &DistortionMatrices)
+void StereoCamera::readDistortionParameters(vector<cv::Mat> &DistortionMatrices)
 {
-	Mat D_left, D_right;
-	vector<Mat> D_matrices;
-
+	Mat D_left = Mat::zeros(8, 1, CV_64F); 
+	Mat D_right = Mat::zeros(8, 1, CV_64F);
+	
 	leftCamera.getDistortionMatrix(D_left);
 	rightCamera.getDistortionMatrix(D_right);
 
-	D_matrices.push_back(D_left);
-	D_matrices.push_back(D_right);
-
-	Mat(D_matrices).copyTo(DistortionMatrices);
-
+	DistortionMatrices.push_back(D_left);
+	DistortionMatrices.push_back(D_right);
+	
 }
 
 

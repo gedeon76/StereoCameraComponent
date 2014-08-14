@@ -60,13 +60,13 @@ public:
 	/// get the intrinsic parameters for each camera
 	/// @param[in,out] IntrinsicParameters It contains the matrices KLeft and KRight corresponding
 	/// to the internal parameters for the left and right cameras
-	virtual void getIntrinsicParameters(cv::OutputArray &IntrinsicParameters) = 0;
+	virtual void getIntrinsicParameters(vector<cv::Mat> &IntrinsicParameters) = 0;
 
 	/// get the distortion parameters for both cameras
 	/// @param[in,out] DistortionMatrices It contains the distortion parameters. The OpenCV model uses 
 	/// k1,k2,k3 for radial distortion and p1 and p2 for tangencial distortion.
 	/// DistortionMatrices contains the parameters for the left and right cameras
-	virtual void getDistortionParameters(cv::OutputArray &DistortionMatrices) = 0;
+	virtual void getDistortionParameters(vector<cv::Mat> &DistortionMatrices) = 0;
 
 	/// get some useful parameters from the intrinsic matrix found after the calibration process
 	/// @param[in,out] CameraParameters It contains some useful camera parameters
@@ -76,12 +76,12 @@ public:
 	/// get the Rotation and traslation between the first and second camera
 	/// @param[in,out] StereoTransforms It contains the 3x3 rotation matrix  and  3x1 traslation matrix 
 	/// transforms between the left and right cameras
-	virtual void getStereoTransforms(cv::OutputArray &StereoTransforms) = 0;
+	virtual void getStereoTransforms(vector<cv::Mat> &StereoTransforms) = 0;
 
 	/// get the projection matrices for each camera
 	/// @param[in,out] ProjectionMatrices It contains the 3x4 projection matrices Pleft and Pright
 	/// for each camera
-	virtual void getProjectionMatrices(cv::OutputArray &ProjectionMatrices) = 0;
+	virtual void getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices) = 0;
 
 	/// get the vergence angle between the left and right cameras
 	virtual double getVergenceAngle() = 0;
@@ -90,13 +90,13 @@ public:
 	/// @param[in,out] FundamentalMatrix it contains the 3x3 fundamental Matrix for the current scene
 	/// seen by the two cameras
 	/// @return the error on the matrix calculation
-	virtual double getFundamentalMatrix(cv::OutputArray &FundamentalMatrix) = 0;
+	virtual double getFundamentalMatrix(cv::Mat &FundamentalMatrix) = 0;
 
 	/// get the esential matrix between the two cameras
 	/// @param[in,out] EsentialMatrix it contains the 3x3 esential matrix for the current scene 
 	/// seen by the two cameras
 	/// @return the error on the matrix calculation
-	virtual double getEsentialMatrix(cv::OutputArray &EsentialMatrix) = 0;
+	virtual double getEsentialMatrix(cv::Mat &EsentialMatrix) = 0;
 
 	
 

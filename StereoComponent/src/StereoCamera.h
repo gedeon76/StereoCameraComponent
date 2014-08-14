@@ -21,15 +21,15 @@ public:
 	void Init();
 	int getStereoCameraState();
 	void calibrateStereoCamera(string &leftSettingsFile, string &rightSettingsFile);
-	void getIntrinsicParameters(cv::OutputArray &IntrinsicParameters);
+	void getIntrinsicParameters(vector<cv::Mat> &IntrinsicParameters);
 	void getCameraUsefulParameters(cameraParameters &cameraUsefulParameters);
-	void getDistortionParameters(cv::OutputArray &DistortionMatrices);
-	void getStereoTransforms(cv::OutputArray &StereoTransforms);
-	void getProjectionMatrices(cv::OutputArray &ProjectionMatrices);
+	void getDistortionParameters(vector<cv::Mat> &DistortionMatrices);
+	void getStereoTransforms(vector<cv::Mat> &StereoTransforms);
+	void getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices);
 	double getVergenceAngle();
 
-	double getFundamentalMatrix(cv::OutputArray &FundamentalMatrix);
-	double getEsentialMatrix(cv::OutputArray &EsentialMatrix);
+	double getFundamentalMatrix(cv::Mat &FundamentalMatrix);
+	double getEsentialMatrix(cv::Mat &EsentialMatrix);
 
 	/// Find a 3D point test method
 	void find3DPoint();
@@ -49,13 +49,13 @@ private:
 	void calibrateCameras(string &leftSettingsFile, string &rightSettingsFile);
 
 	/// Read the intrinsic parameters for the left and right cameras
-	void readIntrinsicParameters(cv::OutputArray &intrinsicParameters);
+	void readIntrinsicParameters(vector<cv::Mat> &intrinsicParameters);
 
 	/// Read some useful camera parameters for the left and right cameras
 	void readCameraUsefulParameters(cameraParameters &camerausefulParameters);
 
 	/// Read the distortion parameters for the left and right cameras
-	void readDistortionParameters(cv::OutputArray &distortionParameters);
+	void readDistortionParameters(vector<cv::Mat> &distortionParameters);
 
 	/// Find the similar matches between the images of each camera
 	void findMatches();
