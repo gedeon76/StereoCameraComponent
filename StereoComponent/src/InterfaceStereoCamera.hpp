@@ -86,13 +86,13 @@ public:
 	/// get the vergence angle between the left and right cameras
 	virtual double getVergenceAngle() = 0;
 
-	/// get the fundamental matrix between the two cameras
+	/// get the fundamental matrix between the two cameras for the calibration environment
 	/// @param[in,out] FundamentalMatrix it contains the 3x3 fundamental Matrix for the current scene
 	/// seen by the two cameras
 	/// @return the error on the matrix calculation
 	virtual double getFundamentalMatrix(cv::Mat &FundamentalMatrix) = 0;
 
-	/// get the esential matrix between the two cameras
+	/// get the esential matrix between the two cameras for the calibration environment
 	/// @param[in,out] EsentialMatrix it contains the 3x3 esential matrix for the current scene 
 	/// seen by the two cameras
 	/// @return the error on the matrix calculation

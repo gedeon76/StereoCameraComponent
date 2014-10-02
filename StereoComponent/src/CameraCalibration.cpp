@@ -4,9 +4,19 @@ CameraCalibration::CameraCalibration()
 {
 	clock_t prevTimestamp = 0;
 	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
-	distortionCoefficients = Mat::zeros(8, 1, CV_64F);
+	distortionCoefficients = Mat::zeros(8, 1, CV_64F);	
 	
 }
+
+// copy constructor
+CameraCalibration::CameraCalibration(const CameraCalibration &camera){
+
+	// threads variables	
+	std::lock_guard<std::mutex> lock(camera.camerasMutex);	
+	firstTimeCapture = false;
+	frameCaptured = true;				// the first time we set to true to start capturing
+
+};
 
 CameraCalibration::~CameraCalibration()
 {
@@ -93,6 +103,7 @@ int CameraCalibration::readResults(string &outputResultsFile)
 
 }
 
+/// it has multithread support under c++ 11
 void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 {
 	// set mode
@@ -103,11 +114,37 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 	// in the original code it was a endless loop
 	for (int i = 0;; ++i)
 	{
+
 		Mat view;
 		bool blinkOutput = false;
 
-		view = s.nextImage();
+		currentThreadID = this_thread::get_id();
+		if (firstTimeCapture == true)
+		{
+			view = s.nextImage();
+			lastAccessedThreadID = currentThreadID;
+			firstTimeCapture = false;
+			frameCaptured = true;
+			
+		}
 
+		// thread operation
+		// add condition variables here for allow capturing video frames at the same time with c++ 11 threads
+		// wait until other thread send notification
+		std::unique_lock<std::mutex> lock(camerasMutex);
+		conditionVariable.wait(lock, [&]{return frameCaptured; });
+	
+		// capture the image
+		if (lastAccessedThreadID != currentThreadID)
+		{
+			view = s.nextImage();
+			lastAccessedThreadID = currentThreadID;
+			frameCaptured = true;
+		}
+
+		lock.unlock();
+		conditionVariable.notify_one();
+		
 		//------------------------- Show original distorted image -----------------------------------
 
 		Mat originalView = view.clone();

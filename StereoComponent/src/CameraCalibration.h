@@ -3,7 +3,7 @@
 	This is the camera calibration class
 	it is based on the OpenCV 2.4.9 Tutorials
 	about camera calibration but written 
-	in a class compact form
+	in a class compact form with multithread capacity
 
 */
 
@@ -11,7 +11,13 @@
 #include "Settings.h"
 #include "Results.h"
 #include "commonStereoComponent.h"
+
+// c++11 headers
 #include <memory>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
 
 
 typedef cameraUsefulData cameraData;
@@ -19,8 +25,11 @@ typedef cameraUsefulData cameraData;
 class CameraCalibration {
 
 
+
 public:
 	CameraCalibration();
+	CameraCalibration(const CameraCalibration &camera);
+	
 
 	~CameraCalibration();
 
@@ -77,6 +86,12 @@ private:
 	clock_t prevTimestamp;
 	const Scalar RED, GREEN;
 	const char ESC_KEY = 27;
-	cameraData cameraUsefulParameters;		
-	
+	cameraData cameraUsefulParameters;	
+
+	mutable std::mutex camerasMutex;
+	std::condition_variable conditionVariable;
+	bool firstTimeCapture;
+	bool frameCaptured;
+	std::thread::id currentThreadID,lastAccessedThreadID;
+	vector<std::thread::id> cameraThreads;
 };

@@ -101,6 +101,7 @@ void StereoCamera::setStereoCameraState(int value)
 void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSettingsFile)
 {
 	// start the calibration process
+
 	int value = StereoHeadState::STEREO_NOT_CALIBRATED;	
 
 	// read the settings files for the left and right cameras
@@ -111,18 +112,19 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 	// store a call to the member function used for camera calibration. 
 	// This calling will be used as the thread callable function parameter with its arguments
-//	std::function<void(CameraCalibration,const string&)> threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
+	std::function<void(CameraCalibration,const string&)>threadCalibrateFunction = &CameraCalibration::getImagesAndFindPatterns;
 
 	//create two threads for camera calibration	
 	
 	const string leftCameraName("leftCamera");
 	const string rightCameraName("rightCamera");
 
-//	std::thread threadForLeftCalibration(threadCalibrateFunction, leftCamera,leftCameraName);
-//	std::thread threadForRightCalibration(threadCalibrateFunction, rightCamera, rightCameraName);
+	std::thread threadForLeftCalibration(threadCalibrateFunction, leftCamera, leftCameraName);
+	std::thread threadForRightCalibration(threadCalibrateFunction, rightCamera, rightCameraName);
 
-//	threadForLeftCalibration.join();
-//	threadForRightCalibration.join();
+		
+	threadForLeftCalibration.join();
+	threadForRightCalibration.join();
 
 	// read the results from xml files
 	string leftResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Left_Camera.xml");

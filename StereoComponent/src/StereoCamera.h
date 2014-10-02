@@ -41,6 +41,7 @@ private:
 	CameraCalibration rightCamera;
 	int cameraGlobalStatus;
 
+	
 
 	/// set the camera state
 	void setStereoCameraState(int value);
