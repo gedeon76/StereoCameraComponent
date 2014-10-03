@@ -9,6 +9,7 @@
 void StereoCamera::Init()
 {
 	cameraGlobalStatus = StereoHeadState::STEREO_NOT_CALIBRATED;
+	
 }
 
 // get the calibration status

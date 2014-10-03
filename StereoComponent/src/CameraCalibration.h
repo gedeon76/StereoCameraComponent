@@ -18,8 +18,6 @@
 #include <mutex>
 #include <condition_variable>
 
-
-
 typedef cameraUsefulData cameraData;
 
 class CameraCalibration {
@@ -28,8 +26,7 @@ class CameraCalibration {
 
 public:
 	CameraCalibration();
-	CameraCalibration(const CameraCalibration &camera);
-	
+	CameraCalibration(const CameraCalibration &camera);	
 
 	~CameraCalibration();
 
@@ -93,5 +90,5 @@ private:
 	bool firstTimeCapture;
 	bool frameCaptured;
 	std::thread::id currentThreadID,lastAccessedThreadID;
-	vector<std::thread::id> cameraThreads;
+	
 };

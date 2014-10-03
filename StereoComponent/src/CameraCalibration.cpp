@@ -8,14 +8,21 @@ CameraCalibration::CameraCalibration()
 	
 }
 
-// copy constructor
+// own copy constructor to acquire the mutex correctly
 CameraCalibration::CameraCalibration(const CameraCalibration &camera){
 
+	clock_t prevTimestamp = 0;
+	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
+	distortionCoefficients = Mat::zeros(8, 1, CV_64F);	
+
+	// assign settings for this camera
+	s = camera.s;
+	
 	// threads variables	
 	std::lock_guard<std::mutex> lock(camera.camerasMutex);	
 	firstTimeCapture = false;
-	frameCaptured = true;				// the first time we set to true to start capturing
-
+	frameCaptured = true;				// the first time we set to true to start capturing	
+	
 };
 
 CameraCalibration::~CameraCalibration()
@@ -86,6 +93,7 @@ int CameraCalibration::readSettings(string &inputSettingsFile)
 		return -1;
 	}
 
+	
 }
 
 int CameraCalibration::readResults(string &outputResultsFile) 
@@ -100,6 +108,7 @@ int CameraCalibration::readResults(string &outputResultsFile)
 
 	fs["Results"] >> calibrationResults;	
 	fs.release();
+	
 
 }
 
@@ -118,14 +127,17 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 		Mat view;
 		bool blinkOutput = false;
 
-		currentThreadID = this_thread::get_id();
-		if (firstTimeCapture == true)
+		currentThreadID = this_thread::get_id();		
+		//view = s.nextImage();
+		if (firstTimeCapture == false)
 		{
 			view = s.nextImage();
 			lastAccessedThreadID = currentThreadID;
-			firstTimeCapture = false;
+			firstTimeCapture = true;
 			frameCaptured = true;
 			
+			conditionVariable.notify_all();
+			std::cout << "notify another thread\n" << endl;
 		}
 
 		// thread operation
@@ -135,12 +147,17 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 		conditionVariable.wait(lock, [&]{return frameCaptured; });
 	
 		// capture the image
-		if (lastAccessedThreadID != currentThreadID)
-		{
+		//if (lastAccessedThreadID != currentThreadID)
+		//{
 			view = s.nextImage();
 			lastAccessedThreadID = currentThreadID;
 			frameCaptured = true;
-		}
+			std::cout << "frame:" << i << currentThreadID << endl;
+		//}
+
+		std::cout << "current thread Id:" << currentThreadID << endl;
+		std::cout << "last accessed thread Id:" << lastAccessedThreadID << endl;
+		
 
 		lock.unlock();
 		conditionVariable.notify_one();
