@@ -7,6 +7,8 @@
 
 */
 
+#pragma once
+
 // include settings structure class
 #include "Settings.h"
 #include "Results.h"
@@ -26,7 +28,7 @@ class CameraCalibration {
 
 public:
 	CameraCalibration();
-	CameraCalibration(const CameraCalibration &camera);	
+	//CameraCalibration(const CameraCalibration &camera);	
 
 	~CameraCalibration();
 
@@ -67,9 +69,6 @@ public:
 	void getDistortionMatrix(Mat &distortionParametersMatrix);
 
 
-
-
-
 private:
 
 	Settings s;
@@ -84,11 +83,14 @@ private:
 	const Scalar RED, GREEN;
 	const char ESC_KEY = 27;
 	cameraData cameraUsefulParameters;	
+	vector<capturedFrame> captureImagesList;
 
-	mutable std::mutex camerasMutex;
-	std::condition_variable conditionVariable;
-	bool firstTimeCapture;
-	bool frameCaptured;
-	std::thread::id currentThreadID,lastAccessedThreadID;
+	int frameCounter;
+
+	//mutable std::mutex camerasMutex;
+	//std::condition_variable conditionVariable;
+	//bool firstTimeCapture;
+	//bool frameCaptured;
+	//std::thread::id currentThreadID,lastAccessedThreadID;
 	
 };

@@ -5,7 +5,17 @@
 
 */
 
-#pragma once		
+#pragma once	
+
+#include <chrono>
+
+/// this structure save acaptured image used for calubration
+struct capturedFrame
+{
+	cv::Mat image;
+	std::chrono::time_point<std::chrono::system_clock> timeofCapture;
+};
+
 
 /// This data structure contains the parameters found for this camera
 struct cameraUsefulData

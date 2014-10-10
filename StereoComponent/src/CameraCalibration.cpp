@@ -9,21 +9,21 @@ CameraCalibration::CameraCalibration()
 }
 
 // own copy constructor to acquire the mutex correctly
-CameraCalibration::CameraCalibration(const CameraCalibration &camera){
-
-	clock_t prevTimestamp = 0;
-	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
-	distortionCoefficients = Mat::zeros(8, 1, CV_64F);	
-
-	// assign settings for this camera
-	s = camera.s;
-	
-	// threads variables	
-	std::lock_guard<std::mutex> lock(camera.camerasMutex);	
-	firstTimeCapture = false;
-	frameCaptured = true;				// the first time we set to true to start capturing	
-	
-};
+//CameraCalibration::CameraCalibration(const CameraCalibration &camera){
+//
+//	clock_t prevTimestamp = 0;
+//	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
+//	distortionCoefficients = Mat::zeros(8, 1, CV_64F);	
+//
+//	// assign settings for this camera
+//	s = camera.s;
+//	
+//	// threads variables	
+//	std::lock_guard<std::mutex> lock(camera.camerasMutex);	
+//	firstTimeCapture = false;
+//	frameCaptured = true;				// the first time we set to true to start capturing	
+//	
+//};
 
 CameraCalibration::~CameraCalibration()
 {
@@ -117,6 +117,9 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 {
 	// set mode
 	mode = CAPTURING;
+	frameCounter = 0;
+	capturedFrame currentImage;
+
 	//mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;// check enum type
 	
 	// Capture only the frames settled in the configuration file 
@@ -126,41 +129,20 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 
 		Mat view;
 		bool blinkOutput = false;
-
-		currentThreadID = this_thread::get_id();		
-		//view = s.nextImage();
-		if (firstTimeCapture == false)
-		{
-			view = s.nextImage();
-			lastAccessedThreadID = currentThreadID;
-			firstTimeCapture = true;
-			frameCaptured = true;
-			
-			conditionVariable.notify_all();
-			std::cout << "notify another thread\n" << endl;
-		}
-
-		// thread operation
-		// add condition variables here for allow capturing video frames at the same time with c++ 11 threads
-		// wait until other thread send notification
-		std::unique_lock<std::mutex> lock(camerasMutex);
-		conditionVariable.wait(lock, [&]{return frameCaptured; });
-	
-		// capture the image
-		//if (lastAccessedThreadID != currentThreadID)
-		//{
-			view = s.nextImage();
-			lastAccessedThreadID = currentThreadID;
-			frameCaptured = true;
-			std::cout << "frame:" << i << currentThreadID << endl;
-		//}
-
-		std::cout << "current thread Id:" << currentThreadID << endl;
-		std::cout << "last accessed thread Id:" << lastAccessedThreadID << endl;
 		
+		// capture the image
+		view = s.nextImage();
+		frameCounter = frameCounter + 1;
 
-		lock.unlock();
-		conditionVariable.notify_one();
+		if (frameCounter <= s.nrFrames){
+
+			currentImage.image = view.clone();
+			currentImage.timeofCapture = std::chrono::system_clock::now();
+
+			captureImagesList.push_back(currentImage);
+
+		}
+		
 		
 		//------------------------- Show original distorted image -----------------------------------
 
