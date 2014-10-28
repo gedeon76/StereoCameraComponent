@@ -13,10 +13,12 @@
 #include <time.h>
 #include <stdio.h>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\calib3d.hpp>
+#include <opencv2\videoio.hpp>
+#include <opencv2\highgui.hpp>
+
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 # define _CRT_SECURE_NO_WARNINGS

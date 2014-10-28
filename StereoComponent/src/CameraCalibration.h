@@ -22,6 +22,8 @@
 
 typedef cameraUsefulData cameraData;
 
+
+
 class CameraCalibration {
 
 
@@ -67,6 +69,8 @@ public:
 
 	// get the distortion parameters found for this camera
 	void getDistortionMatrix(Mat &distortionParametersMatrix);
+
+	void getImagesUsedForCalibration(vector<capturedFrame> &imageList) const;
 
 
 private:
