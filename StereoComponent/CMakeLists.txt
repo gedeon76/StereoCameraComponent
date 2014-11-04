@@ -17,6 +17,12 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_HOME_DIRECTORY}/lib)
 
 # find library packages
 find_package(OpenCV REQUIRED)
+find_package(Boost REQUIRED)
+if (BOOST_FOUND)
+	include_directories(${Boost_INCLUDE_DIRS})
+	link_directories(${Boost_LIBRARY_DIRS})
+endif()
+	
 
 add_subdirectory(src)
 

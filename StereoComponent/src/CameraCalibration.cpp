@@ -8,22 +8,6 @@ CameraCalibration::CameraCalibration()
 	
 }
 
-// own copy constructor to acquire the mutex correctly
-//CameraCalibration::CameraCalibration(const CameraCalibration &camera){
-//
-//	clock_t prevTimestamp = 0;
-//	intrinsicK_Matrix = Mat::eye(3, 3, CV_64F);
-//	distortionCoefficients = Mat::zeros(8, 1, CV_64F);	
-//
-//	// assign settings for this camera
-//	s = camera.s;
-//	
-//	// threads variables	
-//	std::lock_guard<std::mutex> lock(camera.camerasMutex);	
-//	firstTimeCapture = false;
-//	frameCaptured = true;				// the first time we set to true to start capturing	
-//	
-//};
 
 CameraCalibration::~CameraCalibration()
 {
@@ -118,7 +102,22 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 	// set mode
 	mode = CAPTURING;
 	frameCounter = 0;
+	imageCounter = 0;
 	capturedFrame currentImage;
+
+	// read current path
+	boost::filesystem::path currentPath;
+	currentPath = boost::filesystem::current_path();
+
+	cout << "current Path" << currentPath << endl;
+	
+	try{
+		cout << boost::filesystem::complete("results") <<< endl;
+	}
+	catch (boost::filesystem::filesystem_error &e)
+	{
+		cerr << e.what() << endl;
+	}
 
 	//mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;// check enum type
 	
@@ -127,21 +126,12 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 	for (int i = 0;; ++i)
 	{
 
-		Mat view;
+		Mat view,currentView;
 		bool blinkOutput = false;
 		
 		// capture the image
 		view = s.nextImage();
 		frameCounter = frameCounter + 1;
-
-		if (frameCounter <= s.nrFrames){
-
-			currentImage.image = view.clone();
-			currentImage.timeofCapture = std::chrono::system_clock::now();
-
-			captureImagesList.push_back(currentImage);
-
-		}
 		
 		
 		//------------------------- Show original distorted image -----------------------------------
@@ -207,11 +197,25 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 				blinkOutput = s.inputCapture.isOpened();
 			}
 
+			// save the image used for calibration to disk
+			imageCounter = imageCounter + 1;
+			if (imageCounter <= s.nrFrames)
+			{
+				string filename("Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg");
+				vector<int> compression_params;
+				compression_params.push_back(IMWRITE_JPEG_QUALITY);
+				compression_params.push_back(100);
+
+				imwrite(filename, view);
+			}
+
 			// Draw the corners.
 			drawChessboardCorners(view, s.boardSize, Mat(pointBuf), found);
 		}
 
 		//----------------------------- Output Text ------------------------------------------------
+		
+
 		string msg = (mode == CAPTURING) ? "100/100" :
 			mode == CALIBRATED ? "Calibrated" : "the images are being captured";
 		int baseLine = 0;
@@ -237,7 +241,8 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 			Mat temp = view.clone();
 			undistort(temp, view, cameraMatrix, distCoeffs);
 			string msgEsckey = "Press 'esc' key to quit";
-			putText(view, msgEsckey, textOrigin, 1, 1, GREEN, 2);
+			putText(view, msgEsckey, textOrigin, 1, 1, GREEN, 2);			
+
 		}
 
 		//------------------------------ Show image and check for input commands -------------------
@@ -477,8 +482,9 @@ void CameraCalibration::getDistortionMatrix(Mat &distortionCameraParameters)
 }
 
 
-void CameraCalibration::getImagesUsedForCalibration(vector<capturedFrame> &imageList) const
+void CameraCalibration::getImagesUsedForCalibration(vector<capturedFrame> &imageList) 
 {
-	imageList = captureImagesList;
+	// check captured images	
+	
 	
 }

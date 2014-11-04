@@ -8,7 +8,7 @@
 // Initialize method
 void StereoCamera::Init()
 {
-	cameraGlobalStatus = StereoHeadState::STEREO_NOT_CALIBRATED;
+	cameraGlobalStatus = StereoHeadState::STEREO_NOT_CALIBRATED;	
 	
 }
 
@@ -70,6 +70,10 @@ double StereoCamera::getVergenceAngle(){
 double StereoCamera::getFundamentalMatrix(cv::Mat &FundamentalMatrix)
 {
 	double Error = 0;
+
+	// get image points from a couple of image from the calibration process
+	findFundamentalMatrix();
+
 	return Error;
 
 }
@@ -134,6 +138,10 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	leftCamera.readResults(leftResultsFile);
 	rightCamera.readResults(rightResultsFile);
 
+	// save the image used for calibration
+	//leftCamera.getImagesUsedForCalibration(leftCalibrationImageList);
+	//rightCamera.getImagesUsedForCalibration(rightCalibrationImageList);
+
 }
 
 
@@ -180,15 +188,59 @@ void StereoCamera::readDistortionParameters(vector<cv::Mat> &DistortionMatrices)
 
 // find matches on the left and right images
 void StereoCamera::findMatches() {
-	// TODO - implement StereoCamera::findMatches
-	throw "Not yet implemented";
+	
+	// get the images	
+	Mat imageLeft = leftCalibrationImageList.at(0).image.clone();
+	Mat imageRight = rightCalibrationImageList.at(0).image.clone();
+
+	// here we are going to use the A-KAZE detector and descriptor
+	// described in the article
+	// Fast explicit diffussion for accelerated features in nonlinear scale spaces
+	// BMVC.2013  Pablo Alcantarilla et al
+
+	vector<KeyPoint> matchedLeft, matchedRigth;
+	vector<KeyPoint> keyPointsLeft, KeyPointsRigth;
+	Mat descriptorsLeft, descriptorsRigth;
+	vector<DMatch> good_matches;
+
+	AKAZE akaze;
+
+	akaze(imageLeft, noArray(), keyPointsLeft, descriptorsLeft);
+	akaze(imageRight, noArray(), KeyPointsRigth, descriptorsRigth);
+
+	// matcher
+	BFMatcher matcherBruteForce(NORM_HAMMING);
+	vector<vector<DMatch> > matches;
+	matcherBruteForce.knnMatch(descriptorsLeft, descriptorsRigth, matches, 2);
+
+	// find correct matches
+	for (size_t i = 0; i < matches.size(); i++)
+	{
+		DMatch currentMatch = matches[i][0];
+		float distance1 = matches[i][0].distance;
+		float distance2 = matches[i][1].distance;
+
+		if (distance1 < match_ratio*distance2)
+		{
+			matchedLeft.push_back(keyPointsLeft[currentMatch.queryIdx]);
+			matchedRigth.push_back(KeyPointsRigth[currentMatch.queryIdx]);
+			good_matches.push_back(currentMatch);
+		}
+	}
+
+	// draw the results
+	Mat imageMatches;
+	drawMatches(imageLeft, keyPointsLeft, imageRight, KeyPointsRigth, good_matches, imageMatches, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+
+	
 }
 
 
 // find the fundamental matrix
 void StereoCamera::findFundamentalMatrix() {
-	// TODO - implement StereoCamera::findFundamentalMatrix
-	throw "Not yet implemented";
+	
+	// find matches between an image pair
+	findMatches();
 }
 
 

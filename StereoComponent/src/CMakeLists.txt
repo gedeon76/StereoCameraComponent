@@ -1,13 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 
-if (UNIX)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR} ${OpenCV_INCLUDE_DIR} ) 
-  
-else (UNIX)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR} ${OpenCV_INCLUDE_DIR}) 
- 
-endif (UNIX)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ) 
+link_directories(${OpenCV_LIB_DIR} ${Boost_LIBRARY_DIRS})
+  
 
 set(StereoCameraComponent_SRCS 
 					Settings.h 

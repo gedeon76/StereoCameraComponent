@@ -9,7 +9,11 @@
 
 #include <chrono>
 
-/// this structure save acaptured image used for calubration
+// constants for matching
+const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
+const float match_ratio = 0.8f;		 // Nearest neighbor matching ratio
+
+/// this structure save a captured image used for calibration
 struct capturedFrame
 {
 	cv::Mat image;

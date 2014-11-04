@@ -20,6 +20,9 @@
 #include <mutex>
 #include <condition_variable>
 
+// include boost libraries
+#include <boost\filesystem.hpp>
+
 typedef cameraUsefulData cameraData;
 
 
@@ -70,7 +73,8 @@ public:
 	// get the distortion parameters found for this camera
 	void getDistortionMatrix(Mat &distortionParametersMatrix);
 
-	void getImagesUsedForCalibration(vector<capturedFrame> &imageList) const;
+	// get the images used for the calibration process
+	void getImagesUsedForCalibration(vector<capturedFrame> &imageList);
 
 
 private:
@@ -87,14 +91,8 @@ private:
 	const Scalar RED, GREEN;
 	const char ESC_KEY = 27;
 	cameraData cameraUsefulParameters;	
-	vector<capturedFrame> captureImagesList;
-
 	int frameCounter;
+	int imageCounter;
 
-	//mutable std::mutex camerasMutex;
-	//std::condition_variable conditionVariable;
-	//bool firstTimeCapture;
-	//bool frameCaptured;
-	//std::thread::id currentThreadID,lastAccessedThreadID;
 	
 };

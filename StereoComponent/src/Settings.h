@@ -19,6 +19,9 @@
 #include <opencv2\videoio.hpp>
 #include <opencv2\highgui.hpp>
 
+#include <opencv2\features2d.hpp>
+#include <opencv2\opencv.hpp>
+#include <opencv2\imgcodecs.hpp>
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 # define _CRT_SECURE_NO_WARNINGS

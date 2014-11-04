@@ -12,6 +12,8 @@
 #include <thread>
 #include <fstream>
 
+
+
 class StereoCamera : public InterfaceStereoCamera {
 
 public:
@@ -41,6 +43,8 @@ private:
 	string rightInputSettingsFile;
 	CameraCalibration leftCamera;
 	CameraCalibration rightCamera;
+	vector<capturedFrame> leftCalibrationImageList;
+	vector<capturedFrame> rightCalibrationImageList;
 	int cameraGlobalStatus;
 
 	
