@@ -85,6 +85,7 @@ private:
 	vector<vector<Point2f> > imagePoints;
 	Mat cameraMatrix, distCoeffs;
 	Mat intrinsicK_Matrix, distortionCoefficients;
+	Mat savedImage;
 	Size imageSize;
 	int mode;
 	clock_t prevTimestamp;
@@ -93,6 +94,7 @@ private:
 	cameraData cameraUsefulParameters;	
 	int frameCounter;
 	int imageCounter;
+	boost::filesystem::path currentPath, resultsPath;
 
 	
 };

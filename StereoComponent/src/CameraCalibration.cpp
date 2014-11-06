@@ -106,19 +106,10 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 	capturedFrame currentImage;
 
 	// read current path
-	boost::filesystem::path currentPath;
 	currentPath = boost::filesystem::current_path();
-
-	cout << "current Path" << currentPath << endl;
+	resultsPath = currentPath;
+	cout << "current Results Path" << currentPath << '\n' << endl;	
 	
-	try{
-		cout << boost::filesystem::complete("results") <<< endl;
-	}
-	catch (boost::filesystem::filesystem_error &e)
-	{
-		cerr << e.what() << endl;
-	}
-
 	//mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;// check enum type
 	
 	// Capture only the frames settled in the configuration file 
@@ -197,20 +188,10 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 				blinkOutput = s.inputCapture.isOpened();
 			}
 
-			// save the image used for calibration to disk
-			imageCounter = imageCounter + 1;
-			if (imageCounter <= s.nrFrames)
-			{
-				string filename("Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg");
-				vector<int> compression_params;
-				compression_params.push_back(IMWRITE_JPEG_QUALITY);
-				compression_params.push_back(100);
-
-				imwrite(filename, view);
-			}
-
 			// Draw the corners.
+			savedImage = view.clone();
 			drawChessboardCorners(view, s.boardSize, Mat(pointBuf), found);
+			
 		}
 
 		//----------------------------- Output Text ------------------------------------------------
@@ -232,8 +213,29 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 
 		putText(view, msg, textOrigin, 1, 1, mode == CALIBRATED ? GREEN : RED);
 
-		if (blinkOutput)
-			bitwise_not(view, view);			
+		if (blinkOutput){
+
+			bitwise_not(view, view);
+
+			// save the image used for calibration to disk
+			imageCounter = imageCounter + 1;
+			if (imageCounter <= s.nrFrames)
+			{
+
+				boost::filesystem::path p{ "/" };	// add an slash for generate a portable string
+				string filename(resultsPath.string() + p.generic_string() +
+					"Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg");
+
+				vector<int> compression_params;
+				compression_params.push_back(IMWRITE_JPEG_QUALITY);
+				compression_params.push_back(100);
+
+				cv::imwrite(filename, savedImage);
+				cout << cameraName + " frameCounter:" << frameCounter << '\n' << endl;
+				cout << cameraName + " imageCounter:" << imageCounter << '\n' << endl;
+
+			}
+		}
 		
 		//------------------------- Video capture  output  undistorted ------------------------------
 		if (mode == CALIBRATED && s.showUndistorsed)
