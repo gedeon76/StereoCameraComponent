@@ -96,9 +96,12 @@ public:
 	/// @param[in,out] EsentialMatrix it contains the 3x3 esential matrix for the current scene 
 	/// seen by the two cameras
 	/// @return the error on the matrix calculation
-	virtual double getEsentialMatrix(cv::Mat &EsentialMatrix) = 0;
+	virtual double getEsentialMatrix(cv::Mat &EsentialMatrix) = 0;	
 
-	
-
+	/// get the path to a given file
+	/// @param[in,out] Filename it contains the name of the file to look for
+	/// @param[in,out] pathFound it contains the path where the file was found
+	/// @return a flag indicating if the file was found
+	virtual bool getPathForThisFile(string &Filename, string &pathFound) = 0;
 	
 };

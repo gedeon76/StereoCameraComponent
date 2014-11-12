@@ -15,6 +15,7 @@
 #include "commonStereoComponent.h"
 
 // c++11 headers
+#include <functional>
 #include <memory>
 #include <thread>
 #include <mutex>

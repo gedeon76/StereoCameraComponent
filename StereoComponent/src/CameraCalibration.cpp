@@ -231,9 +231,7 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 				compression_params.push_back(100);
 
 				cv::imwrite(filename, savedImage);
-				cout << cameraName + " frameCounter:" << frameCounter << '\n' << endl;
-				cout << cameraName + " imageCounter:" << imageCounter << '\n' << endl;
-
+				
 			}
 		}
 		

@@ -33,12 +33,14 @@ public:
 	double getVergenceAngle();
 
 	double getFundamentalMatrix(cv::Mat &FundamentalMatrix);
-	double getEsentialMatrix(cv::Mat &EsentialMatrix);
+	double getEsentialMatrix(cv::Mat &EsentialMatrix);	
+	bool getPathForThisFile(string &Filename, string &pathFound);
 
 	/// Find a 3D point test method
 	void find3DPoint();
 
 private:
+	boost::filesystem::path pathToSetupFiles, parentPath;
 	string leftInputSettingsFile;
 	string rightInputSettingsFile;
 	CameraCalibration leftCamera;
@@ -77,5 +79,4 @@ private:
 	void findStereoTransform();
 
 	
-
 };

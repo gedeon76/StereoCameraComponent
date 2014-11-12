@@ -85,6 +85,49 @@ double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 	return Error;
 }
 
+// get the path to a given file
+bool StereoCamera::getPathForThisFile(string &Filename, string &pathFound)
+{
+	bool found = false;
+
+	// look for current path
+	boost::filesystem::path directory;
+	boost::filesystem::path currentPath = boost::filesystem::current_path();
+	
+	// get the number of elements of the path
+	int pathElementsSize = 0;
+	for (boost::filesystem::path::iterator it = currentPath.begin(); it != currentPath.end(); ++it){
+		pathElementsSize = pathElementsSize + 1;
+	}
+
+	// built the directory for search 2 levels up
+	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
+	for (int i = 0; i < (pathElementsSize - 2);i++){
+		directory /= *itToBuildPath;
+		++itToBuildPath;
+	}
+
+	boost::filesystem::path& path = directory;
+	const boost::filesystem::path file = Filename;
+	const boost::filesystem::recursive_directory_iterator end;
+	const boost::filesystem::recursive_directory_iterator dir_iter(directory);
+
+	const auto it = std::find_if(dir_iter,
+		end,
+		[&file](const boost::filesystem::directory_entry& e)
+	{
+		return e.path().filename() == file;
+	});
+
+	if (it != end){
+
+		path = it->path();
+		pathFound = path.generic_string();		// make the path portable
+		found = true;
+	}
+	return found;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // internal methods implementation
@@ -132,8 +175,16 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	threadForRightCalibration.join();
 
 	// read the results from xml files
-	string leftResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Left_Camera.xml");
-	string rightResultsFile("C:/Users/henry/Documents/Visual Studio 2013/Projects/testStereoCameraComponent/testStereoCameraComponent/Calibration_Results_Right_Camera.xml");
+	string myPath;
+	string FileName("Calibration_Results_Left_Camera.xml");	
+
+	boost::filesystem::path p{"/"};
+	getPathForThisFile(FileName, myPath);
+	pathToSetupFiles = boost::filesystem::path(myPath);
+	parentPath = pathToSetupFiles.parent_path();
+		
+	string leftResultsFile(parentPath.generic_string() + p.generic_string() + "Calibration_Results_Left_Camera.xml");
+	string rightResultsFile(parentPath.generic_string() + p.generic_string() + "Calibration_Results_Right_Camera.xml");
 
 	leftCamera.readResults(leftResultsFile);
 	rightCamera.readResults(rightResultsFile);
