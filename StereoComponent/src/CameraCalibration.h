@@ -77,6 +77,9 @@ public:
 	// get the images used for the calibration process
 	void getImagesUsedForCalibration(vector<capturedFrame> &imageList);
 
+	// get the number of images used for calibration
+	int getHowManyImagesWereUsedperCamera();
+
 
 private:
 

@@ -86,45 +86,10 @@ double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 }
 
 // get the path to a given file
-bool StereoCamera::getPathForThisFile(string &Filename, string &pathFound)
+bool StereoCamera::getPathForThisFile(string &fileName, string &pathFound)
 {
-	bool found = false;
-
-	// look for current path
-	boost::filesystem::path directory;
-	boost::filesystem::path currentPath = boost::filesystem::current_path();
-	
-	// get the number of elements of the path
-	int pathElementsSize = 0;
-	for (boost::filesystem::path::iterator it = currentPath.begin(); it != currentPath.end(); ++it){
-		pathElementsSize = pathElementsSize + 1;
-	}
-
-	// built the directory for search 2 levels up
-	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
-	for (int i = 0; i < (pathElementsSize - 2);i++){
-		directory /= *itToBuildPath;
-		++itToBuildPath;
-	}
-
-	boost::filesystem::path& path = directory;
-	const boost::filesystem::path file = Filename;
-	const boost::filesystem::recursive_directory_iterator end;
-	const boost::filesystem::recursive_directory_iterator dir_iter(directory);
-
-	const auto it = std::find_if(dir_iter,
-		end,
-		[&file](const boost::filesystem::directory_entry& e)
-	{
-		return e.path().filename() == file;
-	});
-
-	if (it != end){
-
-		path = it->path();
-		pathFound = path.generic_string();		// make the path portable
-		found = true;
-	}
+	bool found;
+	found = getFilePath(fileName, pathFound);
 	return found;
 }
 
@@ -236,13 +201,90 @@ void StereoCamera::readDistortionParameters(vector<cv::Mat> &DistortionMatrices)
 	
 }
 
+// get the path for a given file
+bool StereoCamera::getFilePath(string &fileName,string &pathFound)
+{
+	bool found = false;
+
+	// look for current path
+	boost::filesystem::path directory;
+	boost::filesystem::path currentPath = boost::filesystem::current_path();
+
+	// get the number of elements of the path
+	int pathElementsSize = 0;
+	for (boost::filesystem::path::iterator it = currentPath.begin(); it != currentPath.end(); ++it){
+		pathElementsSize = pathElementsSize + 1;
+	}
+
+	// built the directory for search 2 levels up
+	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
+	for (int i = 0; i < (pathElementsSize - 2); i++){
+		directory /= *itToBuildPath;
+		++itToBuildPath;
+	}
+
+	boost::filesystem::path& path = directory;
+	const boost::filesystem::path file = fileName;
+	const boost::filesystem::recursive_directory_iterator end;
+	const boost::filesystem::recursive_directory_iterator dir_iter(directory);
+
+	const auto it = std::find_if(dir_iter,
+		end,
+		[&file](const boost::filesystem::directory_entry& e)
+	{
+		return e.path().filename() == file;
+	});
+
+	if (it != end){
+
+		path = it->path();
+		pathFound = path.generic_string();		// make the path portable
+		found = true;
+	}
+	return found;
+}
+
+// read the images used from calibration from the path where it were saved
+void StereoCamera::getImageUsedFromCalibration(vector<cv::Mat> &leftImageList, vector<cv::Mat> &rightImageList)
+{
+	// read the jpg files
+	bool foundLeft,foundRight;
+	cv::Mat leftCalibrationImage, rightCalibrationImage;
+	string myPath;
+
+	for (int k = 1; k <= leftCamera.getHowManyImagesWereUsedperCamera();k++){
+
+		// build the string to be looked for
+		string FileNameLeft("Image" + string(std::to_string(k)) + "leftCamera.jpg");
+		string FileNameRight("Image" + string(std::to_string(k)) + "rightCamera.jpg");
+
+		// find and read the images
+		foundLeft = getFilePath(FileNameLeft, myPath);
+		if (foundLeft){
+			leftCalibrationImage = cv::imread(myPath, IMREAD_COLOR);
+			leftCalibrationImageList.push_back(leftCalibrationImage);
+		}
+
+		foundRight = getFilePath(FileNameRight, myPath);
+		if (foundRight){
+			rightCalibrationImage = cv::imread(myPath, IMREAD_COLOR);
+			rightCalibrationImageList.push_back(rightCalibrationImage);
+		}
+	}	
+	
+
+}
 
 // find matches on the left and right images
 void StereoCamera::findMatches() {
 	
 	// get the images	
-	Mat imageLeft = leftCalibrationImageList.at(0).image.clone();
-	Mat imageRight = rightCalibrationImageList.at(0).image.clone();
+	Mat imageLeft, imageRight;
+
+	getImageUsedFromCalibration(leftCalibrationImageList, rightCalibrationImageList);
+
+	imageLeft = leftCalibrationImageList.front();
+	imageRight = rightCalibrationImageList.front();
 
 	// here we are going to use the A-KAZE detector and descriptor
 	// described in the article
@@ -274,14 +316,16 @@ void StereoCamera::findMatches() {
 		if (distance1 < match_ratio*distance2)
 		{
 			matchedLeft.push_back(keyPointsLeft[currentMatch.queryIdx]);
-			matchedRigth.push_back(KeyPointsRigth[currentMatch.queryIdx]);
+			matchedRigth.push_back(KeyPointsRigth[currentMatch.trainIdx]);
 			good_matches.push_back(currentMatch);
 		}
 	}
 
 	// draw the results
-	Mat imageMatches;
+	imageMatches;
 	drawMatches(imageLeft, keyPointsLeft, imageRight, KeyPointsRigth, good_matches, imageMatches, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+	imshow("Matching witk AKAZE Features", imageMatches);
+	imwrite("AKAZEmatches.jpg", imageMatches);
 
 	
 }

@@ -45,11 +45,11 @@ private:
 	string rightInputSettingsFile;
 	CameraCalibration leftCamera;
 	CameraCalibration rightCamera;
-	vector<capturedFrame> leftCalibrationImageList;
-	vector<capturedFrame> rightCalibrationImageList;
-	int cameraGlobalStatus;
+	vector<cv::Mat> leftCalibrationImageList;
+	vector<cv::Mat> rightCalibrationImageList;
+	cv::Mat imageMatches;
+	int cameraGlobalStatus;	
 
-	
 
 	/// set the camera state
 	void setStereoCameraState(int value);
@@ -65,6 +65,12 @@ private:
 
 	/// Read the distortion parameters for the left and right cameras
 	void readDistortionParameters(vector<cv::Mat> &distortionParameters);
+
+	/// Get a path for a given file
+	bool getFilePath(string &fileName, string &pathFound);
+
+	/// Read the images used for camera calibration
+	void getImageUsedFromCalibration(vector<cv::Mat> &leftImageList, vector<cv::Mat> &rightImageList);
 
 	/// Find the similar matches between the images of each camera
 	void findMatches();

@@ -222,7 +222,7 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 			if (imageCounter <= s.nrFrames)
 			{
 
-				boost::filesystem::path p{ "/" };	// add an slash for generate a portable string
+				boost::filesystem::path p{ "/" };	// add a slash for generate a portable string
 				string filename(resultsPath.string() + p.generic_string() +
 					"Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg");
 
@@ -487,4 +487,11 @@ void CameraCalibration::getImagesUsedForCalibration(vector<capturedFrame> &image
 	// check captured images	
 	
 	
+}
+
+int CameraCalibration::getHowManyImagesWereUsedperCamera()
+{
+	int imagesNumber;
+	imagesNumber = s.nrFrames;
+	return imagesNumber;
 }
