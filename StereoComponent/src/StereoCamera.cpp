@@ -53,10 +53,18 @@ void StereoCamera::getDistortionParameters(vector<cv::Mat> &DistortionMatrices)
 }
 
 // get the transforms between cameras
-void StereoCamera::getStereoTransforms(vector<cv::Mat> &StereoTransforms){}
+void StereoCamera::getStereoTransforms(vector<cv::Mat> &StereoTransforms){
+
+	findStereoTransform(StereoTransforms);
+
+}
 
 // get the projection matrix for each camera 
-void StereoCamera::getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices){}
+void StereoCamera::getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices){
+
+
+
+}
 
 // get the vergence angle
 double StereoCamera::getVergenceAngle(){
@@ -71,17 +79,17 @@ double StereoCamera::getFundamentalMatrix(cv::Mat &FundamentalMatrix)
 {
 	double Error = 0;
 
-	// get image points from a couple of image from the calibration process
-	findFundamentalMatrix();
+	// get from image points from a couple of images from the calibration process
+	findFundamentalMatrix(FundamentalMatrix);
 
 	return Error;
-
 }
 
 // get the esential matrix relationship
 double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 {
 	double Error = 0;
+	findEssentialMatrix(EsentialMatrix);
 	return Error;
 }
 
@@ -178,13 +186,11 @@ void StereoCamera::readIntrinsicParameters(vector<cv::Mat> &intrinsicParameters)
 // read some useful parameters from the calibration results
 void StereoCamera::readCameraUsefulParameters(cameraParameters &cameraUsefulParameters)
 {
-	cameraData Data_Left, Data_Right;
+	leftCamera.getCameraUsefulParameters(CameraUsefulParametersLeft);
+	rightCamera.getCameraUsefulParameters(CameraUsefulParametersRight);
 
-	leftCamera.getCameraUsefulParameters(Data_Left);
-	rightCamera.getCameraUsefulParameters(Data_Right);
-
-	cameraUsefulParameters.push_back(Data_Left);
-	cameraUsefulParameters.push_back(Data_Right);
+	cameraUsefulParameters.push_back(CameraUsefulParametersLeft);
+	cameraUsefulParameters.push_back(CameraUsefulParametersRight);
 }
 
 // read the distortion parameters from the calibration results
@@ -291,11 +297,9 @@ void StereoCamera::findMatches() {
 	// Fast explicit diffussion for accelerated features in nonlinear scale spaces
 	// BMVC.2013  Pablo Alcantarilla et al
 
-	vector<KeyPoint> matchedLeft, matchedRigth;
 	vector<KeyPoint> keyPointsLeft, KeyPointsRigth;
 	Mat descriptorsLeft, descriptorsRigth;
-	vector<DMatch> good_matches;
-
+	
 	AKAZE akaze;
 
 	akaze(imageLeft, noArray(), keyPointsLeft, descriptorsLeft);
@@ -315,8 +319,8 @@ void StereoCamera::findMatches() {
 
 		if (distance1 < match_ratio*distance2)
 		{
-			matchedLeft.push_back(keyPointsLeft[currentMatch.queryIdx]);
-			matchedRigth.push_back(KeyPointsRigth[currentMatch.trainIdx]);
+			matchesLeft.push_back(keyPointsLeft[currentMatch.queryIdx]);
+			matchesRight.push_back(KeyPointsRigth[currentMatch.trainIdx]);
 			good_matches.push_back(currentMatch);
 		}
 	}
@@ -325,31 +329,87 @@ void StereoCamera::findMatches() {
 	imageMatches;
 	drawMatches(imageLeft, keyPointsLeft, imageRight, KeyPointsRigth, good_matches, imageMatches, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	imshow("Matching witk AKAZE Features", imageMatches);
-	imwrite("AKAZEmatches.jpg", imageMatches);
-
-	
+	imwrite("AKAZEmatches.jpg", imageMatches);	
 }
 
 
 // find the fundamental matrix
-void StereoCamera::findFundamentalMatrix() {
+void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
 	
 	// find matches between an image pair
+	vector<cv::Point2f> leftPoints, rightPoints;
 	findMatches();
+
+	// select the RANSAC method to calculate the matrix
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+	F_Matrix = findFundamentalMat(leftPoints,rightPoints,FM_RANSAC,3,0.99);
+	F_Matrix.copyTo(F_MatrixExtern);
 }
 
 
 // find the esential matrix
-void StereoCamera::findEssentialMatrix() {
-	// TODO - implement StereoCamera::findEssentialMatrix
-	throw "Not yet implemented";
+void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
+	
+	cv::Mat tmpResult;
+	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+
+	leftCamera.getIntrinsicMatrix(K_left);
+	rightCamera.getIntrinsicMatrix(K_right);
+
+	gemm(K_right,F_Matrix,1.0,noArray(),0.0,tmpResult,GEMM_1_T);
+	gemm(tmpResult,K_left,1.0,noArray(),0.0,E_Matrix,GEMM_1_T);
+	E_Matrix.copyTo(EsentialMatrix);
+
 }
 
 
+// get the rotation angles from a rotation matrix
+void StereoCamera::getRotationAnglesFromMatrix(cv::Mat &rotationMatrix,double &Alpha,double &Beta,double &Gamma){
+
+	// the method used here is from the notes from the web of Steve LaValle curse on Planning Algorithms
+	double R11, R21, R31, R32, R33;
+
+	R11 = rotationMatrix.at<double>(0,0);
+	R21 = rotationMatrix.at<double>(1,0);
+	R31 = rotationMatrix.at<double>(2,0);
+	R32 = rotationMatrix.at<double>(2,1);
+	R33 = rotationMatrix.at<double>(2,2);
+
+	Alpha = std::atan2(R21, R11);
+	Beta = std::atan2(-R31,hypot(R32,R33));
+	Gamma = std::atan2(R32,R33);
+}
+
 // find the transforms between the left and right cameras
-void StereoCamera::findStereoTransform() {
-	// TODO - implement StereoCamera::findStereoTransform
-	throw "Not yet implemented";
+void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
+
+	
+	cv::Mat Rotation, traslation;
+	cv::Mat RotationVector;
+	vector<cv::Point2f> leftPoints, rightPoints;
+
+	// get an average value for the focal lengths and principal points
+	double focalLength = (CameraUsefulParametersLeft.focalLength + CameraUsefulParametersRight.focalLength) / 2;
+	cv::Point2d principalPoint((CameraUsefulParametersLeft.principalPointX + CameraUsefulParametersRight.principalPointX)/2,
+								(CameraUsefulParametersLeft.principalPointY + CameraUsefulParametersRight.principalPointY)/2);
+
+	// perform a cheirality check to know the positive depth from points
+	// some explanation about the esential matrix relationships can be found on the Zisermman book section 9.6
+	// there is a section about the possibles poses from a given Esential Matrix
+	// So it seems that openCV 3.0 has support to probe the correct pose option
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+	recoverPose(E_Matrix, leftPoints, rightPoints, Rotation, traslation, focalLength, principalPoint);
+
+	RotationAndTraslation.push_back(Rotation);
+	RotationAndTraslation.push_back(traslation);
+
+	// get axis of rotation
+	double Alpha, Beta, Gamma;
+	getRotationAnglesFromMatrix(Rotation, Alpha, Beta, Gamma);
+
 }
 
 

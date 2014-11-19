@@ -11,7 +11,7 @@
 
 // constants for matching
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
-const float match_ratio = 0.8f;		 // Nearest neighbor matching ratio
+const float match_ratio = 0.5f;		 // Nearest neighbor matching ratio
 
 /// this structure save a captured image used for calibration
 struct capturedFrame

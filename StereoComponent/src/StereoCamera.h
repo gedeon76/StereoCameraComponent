@@ -45,9 +45,14 @@ private:
 	string rightInputSettingsFile;
 	CameraCalibration leftCamera;
 	CameraCalibration rightCamera;
+	cameraData CameraUsefulParametersLeft;
+	cameraData CameraUsefulParametersRight;
 	vector<cv::Mat> leftCalibrationImageList;
 	vector<cv::Mat> rightCalibrationImageList;
+	vector<KeyPoint> matchesLeft, matchesRight;
+	vector<DMatch> good_matches;
 	cv::Mat imageMatches;
+	cv::Mat F_Matrix,E_Matrix;
 	int cameraGlobalStatus;	
 
 
@@ -76,13 +81,17 @@ private:
 	void findMatches();
 
 	/// Find the fundamental matrix between the images of the two camera
-	void findFundamentalMatrix();
+	void findFundamentalMatrix(cv::Mat &F_Matrix);
 
 	/// Find the esential matrix between the images of the two cameras
-	void findEssentialMatrix();
+	void findEssentialMatrix(cv::Mat &EsentialMatrix);
+
+	/// Get the Yaw,Pitch,Roll angles from Rotation
+
+	void getRotationAnglesFromMatrix(cv::Mat &RotationMatrix, double &Alpha, double &Beta, double &Gamma);
 
 	/// Find the Rotation and traslation between the two cameras
-	void findStereoTransform();
+	void findStereoTransform(vector<cv::Mat> &RotationAndTraslation);
 
 	
 };
