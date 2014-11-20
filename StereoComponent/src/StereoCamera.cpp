@@ -284,7 +284,9 @@ void StereoCamera::getImageUsedFromCalibration(vector<cv::Mat> &leftImageList, v
 // find matches on the left and right images
 void StereoCamera::findMatches() {
 	
-	// get the images	
+	// get the images
+	bool fileFound;
+	string pathToFile;
 	Mat imageLeft, imageRight;
 
 	getImageUsedFromCalibration(leftCalibrationImageList, rightCalibrationImageList);
@@ -329,6 +331,13 @@ void StereoCamera::findMatches() {
 	imageMatches;
 	drawMatches(imageLeft, keyPointsLeft, imageRight, KeyPointsRigth, good_matches, imageMatches, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	imshow("Matching witk AKAZE Features", imageMatches);
+
+	// write image to disk
+	string imageMatchesName("AKAZEmatches.jpg");
+	fileFound = getPathForThisFile(imageMatchesName,pathToFile);
+	if (fileFound){
+		boost::filesystem::remove(pathToFile);
+	}
 	imwrite("AKAZEmatches.jpg", imageMatches);	
 }
 

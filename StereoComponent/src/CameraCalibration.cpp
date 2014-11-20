@@ -219,18 +219,27 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 
 			// save the image used for calibration to disk
 			imageCounter = imageCounter + 1;
+			string pathToFile;
+			string filename;
 			if (imageCounter <= s.nrFrames)
 			{
 
+				string imageName{ "Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg" };
 				boost::filesystem::path p{ "/" };	// add a slash for generate a portable string
-				string filename(resultsPath.string() + p.generic_string() +
-					"Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg");
+				filename.assign(resultsPath.string() + p.generic_string() + imageName);
 
 				vector<int> compression_params;
 				compression_params.push_back(IMWRITE_JPEG_QUALITY);
 				compression_params.push_back(100);
-
+				
+				// check if the file already exist? if yes, erase it
+				bool found = getPathForThisFile(imageName,pathToFile);
+				if (found){
+					boost::filesystem::remove(pathToFile);
+				}
+				// write the new version of the file
 				cv::imwrite(filename, savedImage);
+				
 				
 			}
 		}
@@ -494,4 +503,46 @@ int CameraCalibration::getHowManyImagesWereUsedperCamera()
 	int imagesNumber;
 	imagesNumber = s.nrFrames;
 	return imagesNumber;
+}
+
+bool CameraCalibration::getPathForThisFile(string &fileName, string &pathFound)
+{
+	bool found = false;
+
+	// look for current path
+	boost::filesystem::path directory;
+	boost::filesystem::path currentPath = boost::filesystem::current_path();
+
+	// get the number of elements of the path
+	int pathElementsSize = 0;
+	for (boost::filesystem::path::iterator it = currentPath.begin(); it != currentPath.end(); ++it){
+		pathElementsSize = pathElementsSize + 1;
+	}
+
+	// built the directory for search 1 level up
+	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
+	for (int i = 0; i < (pathElementsSize - 1); i++){
+		directory /= *itToBuildPath;
+		++itToBuildPath;
+	}
+
+	boost::filesystem::path& path = directory;
+	const boost::filesystem::path file = fileName;
+	const boost::filesystem::recursive_directory_iterator end;
+	const boost::filesystem::recursive_directory_iterator dir_iter(directory);
+
+	const auto it = std::find_if(dir_iter,
+		end,
+		[&file](const boost::filesystem::directory_entry& e)
+	{
+		return e.path().filename() == file;
+	});
+
+	if (it != end){
+
+		path = it->path();
+		pathFound = path.generic_string();		// make the path portable
+		found = true;
+	}
+	return found;
 }

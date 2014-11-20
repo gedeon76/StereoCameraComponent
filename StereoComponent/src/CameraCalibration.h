@@ -80,6 +80,9 @@ public:
 	// get the number of images used for calibration
 	int getHowManyImagesWereUsedperCamera();
 
+	// get file path
+	bool getPathForThisFile(string &Filename, string &pathFound);
+
 
 private:
 
