@@ -391,6 +391,14 @@ void StereoCamera::getRotationAnglesFromMatrix(cv::Mat &rotationMatrix,double &A
 	Gamma = std::atan2(R32,R33);
 }
 
+// get the traslation bewteen two cameras
+void StereoCamera::getTraslationFromMatrix(cv::Mat &TraslationMatrix, double &X_shift, double &Y_shift, double &Z_shift){
+
+	X_shift = TraslationMatrix.at<double>(0,0);
+	Y_shift = TraslationMatrix.at<double>(1,0);
+	Z_shift = TraslationMatrix.at<double>(2,0);
+}
+
 // find the transforms between the left and right cameras
 void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 
@@ -419,6 +427,9 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 	double Alpha, Beta, Gamma;
 	getRotationAnglesFromMatrix(Rotation, Alpha, Beta, Gamma);
 
+	// get the traslation
+	double X_shift, Y_shift, Z_shift;
+	getTraslationFromMatrix(traslation,X_shift, Y_shift, Z_shift);
 }
 
 

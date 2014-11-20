@@ -86,9 +86,11 @@ private:
 	/// Find the esential matrix between the images of the two cameras
 	void findEssentialMatrix(cv::Mat &EsentialMatrix);
 
-	/// Get the Yaw,Pitch,Roll angles from Rotation
-
+	/// Get the Yaw,Pitch,Roll angles from Rotation between the left and right cameras
 	void getRotationAnglesFromMatrix(cv::Mat &RotationMatrix, double &Alpha, double &Beta, double &Gamma);
+
+	/// Get the traslation between the left and right cameras
+	void getTraslationFromMatrix(cv::Mat &TraslationMatrix, double &X_shift, double &Y_shift, double &Z_shift);
 
 	/// Find the Rotation and traslation between the two cameras
 	void findStereoTransform(vector<cv::Mat> &RotationAndTraslation);
