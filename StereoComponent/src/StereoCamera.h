@@ -95,5 +95,8 @@ private:
 	/// Find the Rotation and traslation between the two cameras
 	void findStereoTransform(vector<cv::Mat> &RotationAndTraslation);
 
+	/// Print on console the contents of a given Matrix
+	void printMatrix(cv::Mat Matrix, string Matrixname);
+
 	
 };

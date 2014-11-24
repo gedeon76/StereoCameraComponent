@@ -354,22 +354,83 @@ void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
 	KeyPoint::convert(matchesRight, rightPoints);
 	F_Matrix = findFundamentalMat(leftPoints,rightPoints,FM_RANSAC,3,0.99);
 	F_Matrix.copyTo(F_MatrixExtern);
+
+	// print the matrix
+	string F_Name("Fundamental Matrix");
+	printMatrix(F_Matrix, F_Name);
+
+	// probe F
+	cout << "det(F): " << cv::determinant(F_Matrix) << '\n' << endl;
 }
 
 
 // find the esential matrix
 void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	
-	cv::Mat tmpResult;
+	cv::Mat tmpResult, normalized_E;
 	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
 	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
 
 	leftCamera.getIntrinsicMatrix(K_left);
 	rightCamera.getIntrinsicMatrix(K_right);
 
+	// print internal matrices
+	string KL_Name("kLeft Matrix");
+	printMatrix(K_left, KL_Name);
+
+	string KR_Name("kRight Matrix");
+	printMatrix(K_right, KR_Name);
+
 	gemm(K_right,F_Matrix,1.0,noArray(),0.0,tmpResult,GEMM_1_T);
-	gemm(tmpResult,K_left,1.0,noArray(),0.0,E_Matrix,GEMM_1_T);
+	gemm(tmpResult,K_left,1.0,noArray(),0.0,E_Matrix);
 	E_Matrix.copyTo(EsentialMatrix);
+	
+	
+	// print the matrix
+	string E_Name("Essential Matrix");
+	printMatrix(E_Matrix, E_Name);
+
+	cv:Mat w, u, vt;
+	cv::SVD::compute(E_Matrix,w,u,vt);
+
+	printMatrix(w,string("w"));
+	printMatrix(w, string("u"));
+	printMatrix(w, string("vt"));
+
+	cv::normalize(E_Matrix, normalized_E, E_Matrix.at<double>(2, 2));
+	string ENorm_Name("Essential Matrix Normalized");
+	printMatrix(normalized_E, ENorm_Name);
+
+	cv::SVD::compute(normalized_E, w, u, vt);
+	printMatrix(w, string("w"));
+	printMatrix(w, string("u"));
+	printMatrix(w, string("vt"));
+
+	normalized_E.copyTo(E_Matrix);
+
+	// find the matrix E directly
+	vector<cv::Point2f> leftPoints, rightPoints;
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+
+	// get an average value for the focal lengths and principal points
+	double focalLength = (CameraUsefulParametersLeft.focalLength + CameraUsefulParametersRight.focalLength) / 2;
+	cv::Point2d principalPoint((CameraUsefulParametersLeft.principalPointX + CameraUsefulParametersRight.principalPointX) / 2,
+		(CameraUsefulParametersLeft.principalPointY + CameraUsefulParametersRight.principalPointY) / 2);
+
+	cv::Mat E_openCV = findEssentialMat(leftPoints,rightPoints,focalLength,principalPoint,RANSAC,0.999);
+	E_openCV.copyTo(EsentialMatrix);
+	E_openCV.copyTo(E_Matrix);
+	
+	string ECV_Name("Essential Matrix OpenCV");
+	printMatrix(E_openCV, ECV_Name);
+
+	cv::SVD::compute(E_openCV, w, u, vt);
+
+	printMatrix(w, string("w"));
+	printMatrix(w, string("u"));
+	printMatrix(w, string("vt"));
+
 
 }
 
@@ -389,6 +450,15 @@ void StereoCamera::getRotationAnglesFromMatrix(cv::Mat &rotationMatrix,double &A
 	Alpha = std::atan2(R21, R11);
 	Beta = std::atan2(-R31,hypot(R32,R33));
 	Gamma = std::atan2(R32,R33);
+
+	// print the matrix
+	string R_Name("Rotation Matrix");
+	printMatrix(rotationMatrix, R_Name);
+
+	// angles in degrees
+	cout << "Alpha degrees "<< (Alpha * 180) / CV_PI << '\n' << endl;
+	cout << "Beta degrees " << (Beta * 180) / CV_PI  << '\n' << endl;
+	cout << "Gamma degrees " << (Gamma * 180) / CV_PI << '\n' << endl;
 }
 
 // get the traslation bewteen two cameras
@@ -397,6 +467,10 @@ void StereoCamera::getTraslationFromMatrix(cv::Mat &TraslationMatrix, double &X_
 	X_shift = TraslationMatrix.at<double>(0,0);
 	Y_shift = TraslationMatrix.at<double>(1,0);
 	Z_shift = TraslationMatrix.at<double>(2,0);
+
+	// print the matrix
+	string T_Name("traslation Matrix");
+	printMatrix(TraslationMatrix, T_Name);
 }
 
 // find the transforms between the left and right cameras
@@ -433,13 +507,33 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 }
 
 
+
 // find  a 3d point position
 void StereoCamera::find3DPoint() {
 	// TODO - implement StereoCamera::find3DPoint
 	throw "Not yet implemented";
 }
 
+// print the contest of a given Matrix
+void StereoCamera::printMatrix(cv::Mat Matrix, string matrixName){
 
+	// get the size of the matrix
+	string rowContent, rowItem;
+
+	cv::Size matrixSize = Matrix.size();
+
+	cout << matrixName << " content is: " << '\n' << endl;
+	for (int i = 0; i < matrixSize.height;i++){
+		for (int j = 0; j < matrixSize.width;j++){
+
+			rowItem.assign(std::to_string(Matrix.at<double>(i, j)));
+			rowContent.append(rowItem + string("  "));
+		}
+		cout << rowContent << '\n' << endl;
+		rowContent.clear();
+	}
+
+}
 
 
 
