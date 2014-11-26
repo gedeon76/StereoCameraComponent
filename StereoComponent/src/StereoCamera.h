@@ -53,6 +53,7 @@ private:
 	vector<DMatch> good_matches;
 	cv::Mat imageMatches;
 	cv::Mat F_Matrix,E_Matrix;
+	cv::Mat PLeft, PRight;
 	int cameraGlobalStatus;	
 
 
@@ -94,6 +95,11 @@ private:
 
 	/// Find the Rotation and traslation between the two cameras
 	void findStereoTransform(vector<cv::Mat> &RotationAndTraslation);
+
+	/// Find the projection Matrices from the Essential Matrix
+	void findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &ProjectionMatrices);
+
+	void build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T);
 
 	/// Normalize points for finding E matrix
 	void normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints);

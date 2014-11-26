@@ -62,7 +62,7 @@ void StereoCamera::getStereoTransforms(vector<cv::Mat> &StereoTransforms){
 // get the projection matrix for each camera 
 void StereoCamera::getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices){
 
-
+	findProjectionMatricesFrom_E_Matrix(ProjectionMatrices);
 
 }
 
@@ -433,11 +433,11 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	// get E using normalized points
 
-	vector<cv::Point2f> leftNormalizedPoints, rightNormalizedPoints;
-	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
-	normalizePoints(K_right, rightPoints, rightNormalizedPoints);
+	//vector<cv::Point2f> leftNormalizedPoints, rightNormalizedPoints;
+	//normalizePoints(K_left, leftPoints, leftNormalizedPoints);
+	//normalizePoints(K_right, rightPoints, rightNormalizedPoints);
 
-	cv::Mat E_norm = findEssentialMat(leftNormalizedPoints, rightNormalizedPoints, focalLength, principalPoint, RANSAC, 0, 999);
+	/*cv::Mat E_norm = findEssentialMat(leftNormalizedPoints, rightNormalizedPoints, focalLength, principalPoint, RANSAC, 0, 999);
 	E_norm.copyTo(EsentialMatrix);
 	E_norm.copyTo(E_Matrix);
 
@@ -448,7 +448,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	printMatrix(w, string("w"));
 	printMatrix(w, string("u"));
-	printMatrix(w, string("vt"));
+	printMatrix(w, string("vt"));*/
 
 
 }
@@ -525,7 +525,39 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 	getTraslationFromMatrix(traslation,X_shift, Y_shift, Z_shift);
 }
 
+// get a pair of correct matrices P,P' from the essential matrix
+void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &ProjectionMatrices){
 
+	// build the normalized projection Cameras
+	// make the first projection matrix P = [I 0]
+	PLeft = Mat::eye(3, 4, CV_64F);
+
+	// built the alternatives for the second projection matrix 
+	// according to section 9.6 from Zisserman book on 2nd edition
+	cv::Mat P1(3, 4, CV_64F), P2(3, 4, CV_64F), P3(3, 4, CV_64F), P4(3, 4, CV_64F);
+	cv::Mat R1, R2, t;
+
+	decomposeEssentialMat(E_Matrix, R1, R2, t);
+
+	// P1
+	build_Projection_Matrix(P1, R1, t);
+	build_Projection_Matrix(P2, R1, -t);
+	build_Projection_Matrix(P3, R2, t);
+	build_Projection_Matrix(P4, R2, -t);
+
+	string testP1("P1");
+	printMatrix(P1, testP1);
+
+	string testP2("P2");
+	printMatrix(P2, testP2);
+
+	string testP3("P3");
+	printMatrix(P3, testP3);
+
+	string testP4("P4");
+	printMatrix(P4, testP4);
+
+}
 
 // find  a 3d point position
 void StereoCamera::find3DPoint() {
@@ -533,20 +565,44 @@ void StereoCamera::find3DPoint() {
 	throw "Not yet implemented";
 }
 
+// build a normalized projection Matrix P = [R t]
+void StereoCamera::build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T){
+
+	// get the size of the matrix
+	cv::Size matrixSize = P.size();
+
+	// fill the Rotation Part
+	for (int i = 0; i < matrixSize.height;i++){
+		for (int j = 0; j < matrixSize.width - 1;j++){
+
+			P.at<double>(i, j) = R.at<double>(i,j);
+		}
+	}
+
+	// fill the Traslation Part
+	for (int i = 0; i < matrixSize.height;i++){
+		
+		P.at<double>(i, matrixSize.width - 1) = T.at<double>(i,0);
+	}
+
+
+}
+
 // normalize points with a K matrix
 void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints){
 
-	cv::Mat tmpMatrix(3, 1, CV_64F),tmpMatrix2;
+	cv::Mat tmpMatrix,tmpMatrix2;
 	cv::Point2f currentNormalizedPoint;
 	vector<cv::Point3f> tmpNormalizedPoints;
 	convertPointsToHomogeneous(inputPoints, tmpNormalizedPoints);
+	tmpMatrix = cv::Mat(tmpNormalizedPoints);
 	
 	int pointsSize = inputPoints.size();
 	for (int i = 0; i < pointsSize; i++){		
 
-		tmpMatrix.at<double>(0, 0) = tmpNormalizedPoints.at(i).x;
-		tmpMatrix.at<double>(1, 0) = tmpNormalizedPoints.at(i).y;
-		tmpMatrix.at<double>(2, 0) = tmpNormalizedPoints.at(i).z;
+		//tmpMatrix.at<double>(0, 0) = tmpNormalizedPoints.at(i).x;
+		//tmpMatrix.at<double>(1, 0) = tmpNormalizedPoints.at(i).y;
+		//tmpMatrix.at<double>(2, 0) = tmpNormalizedPoints.at(i).z;
 
 		gemm(K.inv(DECOMP_SVD), tmpMatrix, 1.0, cv::noArray(), 0.0, tmpMatrix2);
 		currentNormalizedPoint.x = tmpMatrix2.at<double>(0,0);
