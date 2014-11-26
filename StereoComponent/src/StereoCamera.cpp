@@ -409,7 +409,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	normalized_E.copyTo(E_Matrix);
 
 	// find the matrix E directly
-	vector<cv::Point2f> leftPoints, rightPoints;
+	vector<cv::Point2f> leftPoints, rightPoints, leftPointsNormalized, rightPointsNormalized;
 	KeyPoint::convert(matchesLeft, leftPoints);
 	KeyPoint::convert(matchesRight, rightPoints);
 
@@ -426,6 +426,25 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	printMatrix(E_openCV, ECV_Name);
 
 	cv::SVD::compute(E_openCV, w, u, vt);
+
+	printMatrix(w, string("w"));
+	printMatrix(w, string("u"));
+	printMatrix(w, string("vt"));
+
+	// get E using normalized points
+
+	vector<cv::Point2f> leftNormalizedPoints, rightNormalizedPoints;
+	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
+	normalizePoints(K_right, rightPoints, rightNormalizedPoints);
+
+	cv::Mat E_norm = findEssentialMat(leftNormalizedPoints, rightNormalizedPoints, focalLength, principalPoint, RANSAC, 0, 999);
+	E_norm.copyTo(EsentialMatrix);
+	E_norm.copyTo(E_Matrix);
+
+	string Enorm_Name("Essential Matrix OpenCV normalized");
+	printMatrix(E_norm, Enorm_Name);
+
+	cv::SVD::compute(E_norm, w, u, vt);
 
 	printMatrix(w, string("w"));
 	printMatrix(w, string("u"));
@@ -512,6 +531,29 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 void StereoCamera::find3DPoint() {
 	// TODO - implement StereoCamera::find3DPoint
 	throw "Not yet implemented";
+}
+
+// normalize points with a K matrix
+void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints){
+
+	cv::Mat tmpMatrix(3, 1, CV_64F),tmpMatrix2;
+	cv::Point2f currentNormalizedPoint;
+	vector<cv::Point3f> tmpNormalizedPoints;
+	convertPointsToHomogeneous(inputPoints, tmpNormalizedPoints);
+	
+	int pointsSize = inputPoints.size();
+	for (int i = 0; i < pointsSize; i++){		
+
+		tmpMatrix.at<double>(0, 0) = tmpNormalizedPoints.at(i).x;
+		tmpMatrix.at<double>(1, 0) = tmpNormalizedPoints.at(i).y;
+		tmpMatrix.at<double>(2, 0) = tmpNormalizedPoints.at(i).z;
+
+		gemm(K.inv(DECOMP_SVD), tmpMatrix, 1.0, cv::noArray(), 0.0, tmpMatrix2);
+		currentNormalizedPoint.x = tmpMatrix2.at<double>(0,0);
+		currentNormalizedPoint.y = tmpMatrix2.at<double>(1,0);
+		normalizedPoints.push_back(currentNormalizedPoint);
+		
+	}
 }
 
 // print the contest of a given Matrix
