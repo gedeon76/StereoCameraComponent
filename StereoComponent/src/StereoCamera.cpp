@@ -530,7 +530,9 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	// build the normalized projection Cameras
 	// make the first projection matrix P = [I 0]
+	bool isOK_PRight = false;
 	PLeft = Mat::eye(3, 4, CV_64F);
+	ProjectionMatrices.push_back(PLeft);
 
 	// built the alternatives for the second projection matrix 
 	// according to section 9.6 from Zisserman book on 2nd edition
@@ -539,11 +541,14 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	decomposeEssentialMat(E_Matrix, R1, R2, t);
 
-	// P1
+	// build the projection matrices options
 	build_Projection_Matrix(P1, R1, t);
-	build_Projection_Matrix(P2, R1, -t);
+	build_Projection_Matrix(P2, R1,-t);
 	build_Projection_Matrix(P3, R2, t);
-	build_Projection_Matrix(P4, R2, -t);
+	build_Projection_Matrix(P4, R2,-t);
+
+	string testP("P");
+	printMatrix(PLeft, testP);
 
 	string testP1("P1");
 	printMatrix(P1, testP1);
@@ -556,6 +561,64 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	string testP4("P4");
 	printMatrix(P4, testP4);
+
+	// Find the correct P matrix
+	cv::Mat triangulatedPoints1,triangulatedPoints2, triangulatedPoints3, triangulatedPoints4;
+	vector<cv::Point2f> leftPoints,rightPoints;
+
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+
+	// check depth for the points
+	vector<cv::Point3f> points1_3D, points2_3D, points3_3D, points4_3D;
+
+	triangulatePoints(PLeft, P1, leftPoints, rightPoints, triangulatedPoints1);
+	triangulatePoints(PLeft, P2, leftPoints, rightPoints, triangulatedPoints2);
+	triangulatePoints(PLeft, P3, leftPoints, rightPoints, triangulatedPoints3);
+	triangulatePoints(PLeft, P4, leftPoints, rightPoints, triangulatedPoints4);
+
+	// convert From Homogeneous	
+	cv::convertPointsFromHomogeneous(triangulatedPoints1.reshape(4, 1), points1_3D);
+	cv::convertPointsFromHomogeneous(triangulatedPoints2.reshape(4, 1), points2_3D);
+	cv::convertPointsFromHomogeneous(triangulatedPoints3.reshape(4, 1), points3_3D);
+	cv::convertPointsFromHomogeneous(triangulatedPoints4.reshape(4, 1), points4_3D);
+
+	// check the results for a given point
+	bool isP1, isP2, isP3, isP4;
+	isP1 = test3DPoint(points1_3D.at(0));
+	isP2 = test3DPoint(points2_3D.at(0));
+	isP3 = test3DPoint(points3_3D.at(0));
+	isP4 = test3DPoint(points4_3D.at(0));
+
+	if (isP1 & !isOK_PRight){
+		ProjectionMatrices.push_back(P1);
+		isOK_PRight = true;
+		cout << "P1 choosed" << '\n' << endl;
+	}
+	if (isP2 & !isOK_PRight){
+		ProjectionMatrices.push_back(P2);
+		isOK_PRight = true;
+		cout << "P2 choosed" << '\n' << endl;
+	}
+	if (isP3 & !isOK_PRight){
+		ProjectionMatrices.push_back(P3);
+		isOK_PRight = true;
+		cout << "P3 choosed" << '\n' << endl;
+	}
+	if (isP4 & !isOK_PRight){
+		ProjectionMatrices.push_back(P4);
+		isOK_PRight = true;
+		cout << "P4 choosed" << '\n' << endl;
+	}
+
+	cout << "Point 1" << endl;
+	cout << "X: " << points1_3D.at(0).x << " Y: " << points1_3D.at(0).y << " Z: " << points1_3D.at(0).z << '\n' << endl;
+	cout << "Point 2" << endl;
+	cout << "X: " << points2_3D.at(0).x << " Y: " << points2_3D.at(0).y << " Z: " << points2_3D.at(0).z << '\n' << endl;
+	cout << "Point 3" << endl;
+	cout << "X: " << points3_3D.at(0).x << " Y: " << points3_3D.at(0).y << " Z: " << points3_3D.at(0).z << '\n' << endl;
+	cout << "Point 4" << endl;
+	cout << "X: " << points4_3D.at(0).x << " Y: " << points4_3D.at(0).y << " Z: " << points4_3D.at(0).z << '\n' << endl;
 
 }
 
@@ -584,8 +647,27 @@ void StereoCamera::build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T){
 		
 		P.at<double>(i, matrixSize.width - 1) = T.at<double>(i,0);
 	}
+	
+}
 
+// test a 3D point: all the values must be positive to be correct
+//					positive because are in the front of the camera 
+bool StereoCamera::test3DPoint(cv::Point3f pointToTest){
 
+	bool isCorrect = false;
+	bool xValue, yValue, zValue;
+
+	xValue = std::signbit(pointToTest.x);
+	yValue = std::signbit(pointToTest.y);
+	zValue = std::signbit(pointToTest.z);
+
+	if (!xValue & !yValue & !zValue){
+		isCorrect = true;
+	}
+	else{
+		isCorrect = false;
+	}
+	return isCorrect;
 }
 
 // normalize points with a K matrix
