@@ -103,7 +103,7 @@ private:
 	void build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T);
 
 	/// Test if this 3D point is correct, all values must be positive 
-	bool test3DPoint(cv::Point3f pointToTest);
+	bool test3DPoint(vector<cv::Point3f> pointsToTest);
 
 	/// Normalize points for finding E matrix
 	void normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints);

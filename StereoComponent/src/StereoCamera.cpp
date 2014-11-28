@@ -288,7 +288,7 @@ void StereoCamera::findMatches() {
 	bool fileFound;
 	string pathToFile;
 	Mat imageLeft, imageRight;
-
+	
 	getImageUsedFromCalibration(leftCalibrationImageList, rightCalibrationImageList);
 
 	imageLeft = leftCalibrationImageList.front();
@@ -327,6 +327,7 @@ void StereoCamera::findMatches() {
 		}
 	}
 
+	
 	// draw the results
 	imageMatches;
 	drawMatches(imageLeft, keyPointsLeft, imageRight, KeyPointsRigth, good_matches, imageMatches, DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
@@ -352,7 +353,7 @@ void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
 	// select the RANSAC method to calculate the matrix
 	KeyPoint::convert(matchesLeft, leftPoints);
 	KeyPoint::convert(matchesRight, rightPoints);
-	F_Matrix = findFundamentalMat(leftPoints,rightPoints,FM_RANSAC,3,0.99);
+	F_Matrix = findFundamentalMat(leftPoints,rightPoints,FM_RANSAC,3,0.999);
 	F_Matrix.copyTo(F_MatrixExtern);
 
 	// print the matrix
@@ -384,7 +385,6 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	gemm(K_right,F_Matrix,1.0,noArray(),0.0,tmpResult,GEMM_1_T);
 	gemm(tmpResult,K_left,1.0,noArray(),0.0,E_Matrix);
 	E_Matrix.copyTo(EsentialMatrix);
-	
 	
 	// print the matrix
 	string E_Name("Essential Matrix");
@@ -569,13 +569,17 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 	KeyPoint::convert(matchesLeft, leftPoints);
 	KeyPoint::convert(matchesRight, rightPoints);
 
+	// refine the matches
+	vector<cv::Point2f> refinedMatchesLeft, refinedMatchesRight;
+	correctMatches(F_Matrix, leftPoints, rightPoints, refinedMatchesLeft, refinedMatchesRight);
+
 	// check depth for the points
 	vector<cv::Point3f> points1_3D, points2_3D, points3_3D, points4_3D;
 
-	triangulatePoints(PLeft, P1, leftPoints, rightPoints, triangulatedPoints1);
-	triangulatePoints(PLeft, P2, leftPoints, rightPoints, triangulatedPoints2);
-	triangulatePoints(PLeft, P3, leftPoints, rightPoints, triangulatedPoints3);
-	triangulatePoints(PLeft, P4, leftPoints, rightPoints, triangulatedPoints4);
+	triangulatePoints(PLeft, P1, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints1);
+	triangulatePoints(PLeft, P2, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints2);
+	triangulatePoints(PLeft, P3, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints3);
+	triangulatePoints(PLeft, P4, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints4);
 
 	// convert From Homogeneous	
 	cv::convertPointsFromHomogeneous(triangulatedPoints1.reshape(4, 1), points1_3D);
@@ -585,10 +589,10 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	// check the results for a given point
 	bool isP1, isP2, isP3, isP4;
-	isP1 = test3DPoint(points1_3D.at(0));
-	isP2 = test3DPoint(points2_3D.at(0));
-	isP3 = test3DPoint(points3_3D.at(0));
-	isP4 = test3DPoint(points4_3D.at(0));
+	isP1 = test3DPoint(points1_3D);
+	isP2 = test3DPoint(points2_3D);
+	isP3 = test3DPoint(points3_3D);
+	isP4 = test3DPoint(points4_3D);
 
 	if (isP1 & !isOK_PRight){
 		ProjectionMatrices.push_back(P1);
@@ -652,21 +656,26 @@ void StereoCamera::build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T){
 
 // test a 3D point: all the values must be positive to be correct
 //					positive because are in the front of the camera 
-bool StereoCamera::test3DPoint(cv::Point3f pointToTest){
+bool StereoCamera::test3DPoint(vector<cv::Point3f> pointsToTest){
 
 	bool isCorrect = false;
 	bool xValue, yValue, zValue;
 
-	xValue = std::signbit(pointToTest.x);
-	yValue = std::signbit(pointToTest.y);
-	zValue = std::signbit(pointToTest.z);
+	for (int i = 0; i < pointsToTest.size(); i++){
+	
+		xValue = std::signbit(pointsToTest.at(i).x);
+		yValue = std::signbit(pointsToTest.at(i).y);
+		zValue = std::signbit(pointsToTest.at(i).z);
 
-	if (!xValue & !yValue & !zValue){
-		isCorrect = true;
-	}
-	else{
-		isCorrect = false;
-	}
+		if (!xValue & !yValue & !zValue){
+			isCorrect = true;
+		}
+		else{
+			isCorrect = false;
+			break;
+		}
+	
+	}	
 	return isCorrect;
 }
 
