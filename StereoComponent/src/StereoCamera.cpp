@@ -302,10 +302,10 @@ void StereoCamera::findMatches() {
 	vector<KeyPoint> keyPointsLeft, KeyPointsRigth;
 	Mat descriptorsLeft, descriptorsRigth;
 	
-	AKAZE akaze;
+	cv::Ptr<AKAZE> akaze = AKAZE::create();
 
-	akaze(imageLeft, noArray(), keyPointsLeft, descriptorsLeft);
-	akaze(imageRight, noArray(), KeyPointsRigth, descriptorsRigth);
+	akaze->detectAndCompute(imageLeft, noArray(), keyPointsLeft, descriptorsLeft);
+	akaze->detectAndCompute(imageRight, noArray(), KeyPointsRigth, descriptorsRigth);
 
 	// matcher
 	BFMatcher matcherBruteForce(NORM_HAMMING);
@@ -390,7 +390,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	string E_Name("Essential Matrix");
 	printMatrix(E_Matrix, E_Name);
 
-	cv:Mat w, u, vt;
+	cv::Mat w, u, vt;
 	cv::SVD::compute(E_Matrix,w,u,vt);
 
 	printMatrix(w,string("w"));

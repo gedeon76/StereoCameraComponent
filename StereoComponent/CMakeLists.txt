@@ -17,13 +17,40 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_HOME_DIRECTORY}/lib)
 
 # find library packages
 find_package(OpenCV REQUIRED)
-find_package(Boost REQUIRED)
-if (BOOST_FOUND)
+
+#find the boost libraries
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+set(BOOST_ROOT $ENV{BOOSTDIR})
+
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86")
+	set(ARCH "32")
+	message("Arch: "${CMAKE_SYSTEM_PROCESSOR})
+elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x64")
+	set(ARCH "64")
+	message("Arch: "${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
+if (WIN32)
+	# look for vs2013 version
+	if (${MSVC12})
+			set(BOOST_LIBRARYDIR ${BOOST_ROOT}/lib${ARCH}-msvc-12.0)
+			message("BOOST_LIBRARYDIR: " ${BOOST_LIBRARYDIR})
+	endif()
+	
+endif()
+
+find_package(Boost REQUIRED COMPONENTS filesystem)
+
+if (Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})
+	message("Boost include dir: " ${Boost_INCLUDE_DIRS})
 	link_directories(${Boost_LIBRARY_DIRS})
+	message("Boost libraries dir: " ${Boost_LIBRARY_DIRS})
 endif()
 	
-
+# add source directory
 add_subdirectory(src)
 
 

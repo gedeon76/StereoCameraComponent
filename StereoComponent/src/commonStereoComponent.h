@@ -9,9 +9,15 @@
 
 #include <chrono>
 
-// constants for matching
+/// constants for matching
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float match_ratio = 0.5f;		 // Nearest neighbor matching ratio
+
+/// constants for tracking
+const double akaze_thresh = 3e-4;	// AKAZE detection threshold set to locate about 1000 keypoints
+const double ransac_thresh = 2.5f;	// RANSAC inlier threshold
+const int min_inliers = 100;		// Minimal number of inliers to draw bounding box
+const int stats_update_period = 10;	// On-screen statistics are updated every 10 frames
 
 /// this structure save a captured image used for calibration
 struct capturedFrame
