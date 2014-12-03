@@ -13,7 +13,6 @@
 #include <fstream>
 
 
-
 class StereoCamera : public InterfaceStereoCamera {
 
 public:
