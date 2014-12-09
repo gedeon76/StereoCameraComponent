@@ -13,9 +13,11 @@ set(StereoCameraComponent_SRCS
 					InterfaceStereoCamera.hpp
 					StereoCamera.h 
 					StereoCameraAccess.h 
+					TrackerPoint.h
 					Settings.cpp 
 					Results.cpp 
-					CameraCalibration.cpp 
+					CameraCalibration.cpp
+					TrackerPoint.cpp 
 					StereoCamera.cpp 
 					StereoCameraAccess.cpp)
 
@@ -25,8 +27,10 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_HOME_DIRECTORY}/lib )
 
 # copy the interface header to the library
 file(COPY	InterfaceStereoCamera.hpp 
+			CameraCalibration.h
 			commonStereoComponent.h  
 			StereoCameraAccess.h 
+			TrackerPoint.h
 			StereoCamera.h
 			Settings.h
 			Results.h

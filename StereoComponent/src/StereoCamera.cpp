@@ -101,6 +101,12 @@ bool StereoCamera::getPathForThisFile(string &fileName, string &pathFound)
 	return found;
 }
 
+// perform a test for the results from the calibration
+void StereoCamera::testCalibrationProcess(){
+
+	trackTestPointer();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // internal methods implementation
@@ -656,6 +662,7 @@ void StereoCamera::build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T){
 
 // test a 3D point: all the values must be positive to be correct
 //					positive because are in the front of the camera 
+//					for details see Zisserman book  on multiple view geometry section 9.6
 bool StereoCamera::test3DPoint(vector<cv::Point3f> pointsToTest){
 
 	bool isCorrect = false;
@@ -701,6 +708,28 @@ void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, 
 		normalizedPoints.push_back(currentNormalizedPoint);
 		
 	}
+}
+
+// perform a tracking test for verification of
+//			F,E,P and P' matrices
+void StereoCamera::trackTestPointer(){
+
+	cv::Mat DistortionCoeffsLeft = Mat::zeros(8, 1, CV_64F);
+	cv::Mat DistortionCoeffsRight = Mat::zeros(8, 1, CV_64F);
+
+	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+
+	leftCamera.getIntrinsicMatrix(K_left);
+	leftCamera.getDistortionMatrix(DistortionCoeffsLeft);
+
+	rightCamera.getIntrinsicMatrix(K_right);
+	rightCamera.getDistortionMatrix(DistortionCoeffsRight);
+
+	// start tracking
+	TrackerPoint trackerL(K_left, DistortionCoeffsLeft);
+	trackerL.startTracking();
+
 }
 
 // print the contest of a given Matrix

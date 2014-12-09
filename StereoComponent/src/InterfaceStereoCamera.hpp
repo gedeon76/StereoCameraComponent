@@ -30,6 +30,7 @@
 // include opencv dependency
 #include <opencv2/core.hpp>
 #include "commonStereoComponent.h"
+#include "Trackerpoint.h"
 
 class InterfaceStereoCamera {
 
@@ -103,5 +104,8 @@ public:
 	/// @param[in,out] pathFound it contains the path where the file was found
 	/// @return a flag indicating if the file was found
 	virtual bool getPathForThisFile(string &Filename, string &pathFound) = 0;
+
+	/// realize a test to probe the results from this calibration process
+	virtual void testCalibrationProcess() = 0;
 	
 };

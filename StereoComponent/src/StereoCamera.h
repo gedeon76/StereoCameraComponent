@@ -34,6 +34,7 @@ public:
 	double getFundamentalMatrix(cv::Mat &FundamentalMatrix);
 	double getEsentialMatrix(cv::Mat &EsentialMatrix);	
 	bool getPathForThisFile(string &Filename, string &pathFound);
+	void testCalibrationProcess();
 
 	/// Find a 3D point test method
 	void find3DPoint();
@@ -106,6 +107,9 @@ private:
 
 	/// Normalize points for finding E matrix
 	void normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints);
+
+	/// Perform tracking from a pointer
+	void trackTestPointer();
 
 	/// Print on console the contents of a given Matrix
 	void printMatrix(cv::Mat Matrix, string Matrixname);
