@@ -83,6 +83,9 @@ public:
 	// get file path
 	bool getPathForThisFile(string &Filename, string &pathFound);
 
+	// get camera ID
+	void getCameraID(int &cameraID);
+
 
 private:
 

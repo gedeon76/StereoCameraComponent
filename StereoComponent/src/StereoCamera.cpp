@@ -714,21 +714,38 @@ void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, 
 //			F,E,P and P' matrices
 void StereoCamera::trackTestPointer(){
 
+	int cameraID_Left, cameraID_Right;
+	string cameraName_Left("LeftCamera"), cameraName_Right("RightCamera");
+
 	cv::Mat DistortionCoeffsLeft = Mat::zeros(8, 1, CV_64F);
 	cv::Mat DistortionCoeffsRight = Mat::zeros(8, 1, CV_64F);
 
 	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
 	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
 
+	// get the matrix K and distortion coefficients
 	leftCamera.getIntrinsicMatrix(K_left);
 	leftCamera.getDistortionMatrix(DistortionCoeffsLeft);
 
 	rightCamera.getIntrinsicMatrix(K_right);
 	rightCamera.getDistortionMatrix(DistortionCoeffsRight);
 
+	// get the corresponding input device IDs
+	leftCamera.getCameraID(cameraID_Left);
+	rightCamera.getCameraID(cameraID_Right);
+
 	// start tracking
-	TrackerPoint trackerL(K_left, DistortionCoeffsLeft);
-	trackerL.startTracking();
+	TrackerPoint trackerL(cameraID_Left, cameraName_Left, K_left, DistortionCoeffsLeft);
+	TrackerPoint trackerR(cameraID_Right,cameraName_Right,K_right, DistortionCoeffsRight);
+
+	// create threads for reading data
+	std::function<void (TrackerPoint)> threadTrackingFunction = &TrackerPoint::startTracking;
+	
+	std::thread leftTrackerThread(threadTrackingFunction,trackerL);
+	std::thread rightTrackerThread(threadTrackingFunction,trackerR);
+
+	leftTrackerThread.join();
+	rightTrackerThread.join();	
 
 }
 

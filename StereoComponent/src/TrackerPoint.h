@@ -35,19 +35,11 @@ const int MAX_NUM_OBJECTS = 50;
 //minimum and maximum object area
 const int MIN_OBJECT_AREA = 20 * 20;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
-//names that will appear at the top of each window
-const string windowName = "Original Image";
-const string windowName1 = "HSV Image";
-const string windowName2 = "Thresholded Image";
-const string windowName3 = "After Morphological Operations";
-const string trackbarWindowName = "Trackbars";
-
-
 
 class TrackerPoint
 {
 public:
-	TrackerPoint(cv::Mat K_Matrix, cv::Mat DistortionCoeffs);
+	TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, cv::Mat DistortionCoeffs);
 	~TrackerPoint();
 
 	void createTrackBars();
@@ -58,11 +50,19 @@ public:
 
 private:
 	cv::VideoCapture inputCamera;
+	int cameraID;
 	//initial min and max HSV filter values.
 	//these will be changed using trackbars
 	int H_MIN,H_MAX;
 	int S_MIN,S_MAX;
 	int V_MIN,V_MAX;
+
+	//names that will appear at the top of each window
+	string windowName;
+	string windowName1;
+	string windowName2;
+	string windowName3;
+	string trackbarWindowName;
 
 		
 };

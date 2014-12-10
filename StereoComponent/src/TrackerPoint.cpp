@@ -6,14 +6,23 @@ void on_trackbarCallback(int, void*)
 }
 
 // constructor
-TrackerPoint::TrackerPoint(cv::Mat K_Matrix, cv::Mat DistortionCoeffs){
+TrackerPoint::TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, cv::Mat DistortionCoeffs){
 
 	//initial min and max HSV filter values.
 	//these will be changed using trackbars
 	H_MIN = 0;	H_MAX = 256;
 	S_MIN = 0;	S_MAX = 256;
 	V_MIN = 0;	V_MAX = 256;
-	
+
+	// set the camera identification
+	cameraID = camera_ID;	
+
+	// windows names
+	windowName.assign("Original Image"+cameraName);
+	windowName1.assign("HSV Image"+cameraName);
+	windowName2.assign("Thresholded Image"+cameraName);
+	windowName3.assign("After Morphological Operations"+cameraName);
+	trackbarWindowName.assign("Trackbars"+cameraName);
 }
 
 // destructor
@@ -174,8 +183,9 @@ void TrackerPoint::startTracking(){
 	cv::VideoCapture capture;
 
 	//open capture object at location zero (default location for webcam)
-	capture.open(1);
-
+	if (!capture.isOpened()){
+		capture.open(cameraID);
+	}
 	//set height and width of capture frame
 	capture.set(cv::CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	capture.set(cv::CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);

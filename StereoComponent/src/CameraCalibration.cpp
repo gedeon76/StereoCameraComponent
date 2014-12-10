@@ -546,3 +546,8 @@ bool CameraCalibration::getPathForThisFile(string &fileName, string &pathFound)
 	}
 	return found;
 }
+
+void CameraCalibration::getCameraID(int &cameraID){
+
+	cameraID = s.cameraID;
+}
