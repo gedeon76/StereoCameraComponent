@@ -5,6 +5,7 @@ void on_trackbarCallback(int, void*)
 	// trackbar position is changed
 }
 
+
 // constructor
 TrackerPoint::TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, cv::Mat DistortionCoeffs){
 
@@ -15,14 +16,29 @@ TrackerPoint::TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, c
 	V_MIN = 0;	V_MAX = 256;
 
 	// set the camera identification
-	cameraID = camera_ID;	
+	cameraID = camera_ID;
+	switch (cameraID)
+	{
+	case 0:
+		myIdentity = cameraIdentity::LEFT_CAMERA;
+		break;
+	case 1:
+		myIdentity = cameraIdentity::RIGHT_CAMERA;
+		break;
+	default:
+		break;
+	}
+
+	// set camera name
+	thisCameraName.assign(cameraName);
 
 	// windows names
 	windowName.assign("Original Image"+cameraName);
 	windowName1.assign("HSV Image"+cameraName);
 	windowName2.assign("Thresholded Image"+cameraName);
 	windowName3.assign("After Morphological Operations"+cameraName);
-	trackbarWindowName.assign("Trackbars"+cameraName);
+	trackbarWindowName.assign("Trackbars"+cameraName);	
+	
 }
 
 // destructor
@@ -212,10 +228,12 @@ void TrackerPoint::startTracking(){
 		//pass in thresholded frame to our object tracking function
 		//this function will return the x and y coordinates of the
 		//filtered object
-		if (trackObjects)
+		if (trackObjects){
 			trackFilteredObject(x, y, threshold, cameraFeed);
 
-		// send signal with information
+			// send signal with point information
+			doEmit(x, y);			
+			}
 
 		//show frames 
 		cv::imshow(windowName2, threshold);
@@ -228,5 +246,57 @@ void TrackerPoint::startTracking(){
 	}
 
 	
+}
+
+// emit a signal
+void TrackerPoint::doEmit(int x, int y){
+
+	currentPoint.x = x;
+	currentPoint.y = y;
+	boost::signals2::signal<cv::Point2f()> pointSignal;
+	pointSignal.connect(std::bind(&TrackerPoint::getCurrentPoint,this));
+
+	// emit the signal
+	pointSignal();
+
+	// send proper signal
+	switch (myIdentity)
+	{
+	case cameraIdentity::LEFT_CAMERA:
+		ownSignalL(currentPoint);
+		break;
+	case cameraIdentity::RIGHT_CAMERA:
+		ownSignalR(currentPoint);
+		break;
+	default:
+		break;
+	}
+	
+}
+
+
+// get the current point
+cv::Point2f TrackerPoint::getCurrentPoint(){
+
+	return currentPoint;
+}
+
+// register slot to connect
+Connection TrackerPoint::registerSignal(const signalType::slot_type& slot){
+
+	// register(connect) proper signal
+	switch (myIdentity)
+	{
+	case cameraIdentity::LEFT_CAMERA:
+		signalConnection = ownSignalL.connect(slot);
+		break;
+	case cameraIdentity::RIGHT_CAMERA:
+		signalConnection = ownSignalR.connect(slot);
+		break;
+	default:
+		break;
+	}
+		
+	return signalConnection;
 }
 

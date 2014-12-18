@@ -1,5 +1,6 @@
 project(StereoCameraComponent)
 cmake_minimum_required(VERSION 2.8)
+add_definitions(-std=c++11)
 
 # if(NOT CMAKE_BUILD_TYPE)
 #   set(CMAKE_BUILD_TYPE Debug CACHE STRING
@@ -41,7 +42,7 @@ if (WIN32)
 	
 endif()
 
-find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost REQUIRED COMPONENTS thread date_time system filesystem signals)
 
 if (Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})

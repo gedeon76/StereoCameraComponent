@@ -736,10 +736,14 @@ void StereoCamera::trackTestPointer(){
 
 	// start tracking
 	TrackerPoint trackerL(cameraID_Left, cameraName_Left, K_left, DistortionCoeffsLeft);
-	TrackerPoint trackerR(cameraID_Right,cameraName_Right,K_right, DistortionCoeffsRight);
+	TrackerPoint trackerR(cameraID_Right,cameraName_Right,K_right, DistortionCoeffsRight);	
+
+	// register(connect) the signals to the slots(receivers) functions
+	trackerL.registerSignal(boost::bind(&StereoCamera::getLeftPoint, this, _1));
+	trackerR.registerSignal(boost::bind(&StereoCamera::getRightPoint,this, _1));	
 
 	// create threads for reading data
-	std::function<void (TrackerPoint)> threadTrackingFunction = &TrackerPoint::startTracking;
+	std::function<void(TrackerPoint)> threadTrackingFunction = &TrackerPoint::startTracking;
 	
 	std::thread leftTrackerThread(threadTrackingFunction,trackerL);
 	std::thread rightTrackerThread(threadTrackingFunction,trackerR);
@@ -768,6 +772,30 @@ void StereoCamera::printMatrix(cv::Mat Matrix, string matrixName){
 		rowContent.clear();
 	}
 
+}
+
+// get the left point from tracking test
+void StereoCamera::getLeftPoint(cv::Point2f leftPoint){
+
+	cout << "Left Position is: " << leftPoint.x << " " << leftPoint.y << "\n" << endl;
+}
+
+// get the right point from tracking test
+void StereoCamera::getRightPoint(cv::Point2f rightPoint){
+
+	cout << "Right Position is: " << rightPoint.x << " " << rightPoint.y << "\n" << endl;
+}
+
+// evaluate results from calibration
+void StereoCamera::evaluateResults(cv::Point2f leftPoint, cv::Point2f rightPoint){
+
+
+}
+
+// test boost signal
+void StereoCamera::receiveSignal(int i){
+
+	cout << "testing signal:"<< i <<" \n" << endl;
 }
 
 

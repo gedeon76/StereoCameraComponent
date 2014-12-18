@@ -256,7 +256,11 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 
 		//------------------------------ Show image and check for input commands -------------------
 		imshow(cameraName, view);
-		
+
+		//delay 30ms so that screen can refresh.
+		//image will not appear without this waitKey() command
+		cv::waitKey(30);
+
 		char c = waitKey(1);
 
 		if (c == ESC_KEY)    //  Escape key

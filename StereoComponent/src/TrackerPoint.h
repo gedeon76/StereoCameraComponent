@@ -12,13 +12,14 @@
 
 #pragma once
 
-#include <opencv2\tracking.hpp>			// opencv contrib module
+//#include <opencv2\tracking.hpp>			// opencv contrib module
 #include <opencv2\features2d.hpp>
 #include <opencv2\videoio.hpp>
 #include <opencv2\opencv.hpp>
 #include <opencv2\highgui.hpp>
 #include <iomanip>
-#include <vector>;
+#include <vector>
+#include <boost/signals2.hpp>
 
 #include "commonStereoComponent.h"
 
@@ -36,9 +37,17 @@ const int MAX_NUM_OBJECTS = 50;
 const int MIN_OBJECT_AREA = 20 * 20;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 
+typedef boost::signals2::connection Connection;
+typedef boost::signals2::signal<void(cv::Point2f)> signalType;
+static signalType ownSignalL;
+static signalType ownSignalR;
+
+
+
 class TrackerPoint
-{
-public:
+{	
+	
+public:	
 	TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, cv::Mat DistortionCoeffs);
 	~TrackerPoint();
 
@@ -46,11 +55,17 @@ public:
 	void drawObject(int x, int y, cv::Mat &frame);
 	void applyMorphologicalFilters(cv::Mat &threshold);
 	void trackFilteredObject(int &x, int &y, cv::Mat threshold, cv::Mat &cameraFeed);
-	void startTracking();	
+	void startTracking();
+	void doEmit(int x, int y);	// emit the boost signal
+	cv::Point2f getCurrentPoint();
 
+	Connection registerSignal(const signalType::slot_type& slot);	
+			
 private:
 	cv::VideoCapture inputCamera;
 	int cameraID;
+	string thisCameraName;
+	cameraIdentity myIdentity;
 	//initial min and max HSV filter values.
 	//these will be changed using trackbars
 	int H_MIN,H_MAX;
@@ -64,6 +79,7 @@ private:
 	string windowName3;
 	string trackbarWindowName;
 
-		
+	// current position
+	cv::Point2f currentPoint;	
+	Connection signalConnection;		
 };
-

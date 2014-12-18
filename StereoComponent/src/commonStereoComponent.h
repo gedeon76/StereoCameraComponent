@@ -9,6 +9,9 @@
 
 #include <chrono>
 
+// camera identities
+enum cameraIdentity{ LEFT_CAMERA, RIGHT_CAMERA };
+
 /// constants for matching
 const float inlier_threshold = 2.5f; // Distance threshold to identify inliers
 const float match_ratio = 0.5f;		 // Nearest neighbor matching ratio

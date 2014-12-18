@@ -114,5 +114,15 @@ private:
 	/// Print on console the contents of a given Matrix
 	void printMatrix(cv::Mat Matrix, string Matrixname);
 
-	
+	/// Get the left Point from Tracking test
+	void getLeftPoint(cv::Point2f leftPoint);
+
+	/// Get the right Point from Tracking test
+	void getRightPoint(cv::Point2f rightPoint);
+
+	/// Evaluate Results from calibration
+	void evaluateResults(cv::Point2f leftPoint, cv::Point2f rightPoint);
+
+	///
+	void receiveSignal(int i);
 };
