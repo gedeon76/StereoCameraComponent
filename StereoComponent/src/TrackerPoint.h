@@ -39,10 +39,10 @@ const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 
 typedef boost::signals2::connection Connection;
 typedef boost::signals2::signal<void(cv::Point2f)> signalType;
+typedef boost::signals2::signal<void()> signalResults;
 static signalType ownSignalL;
 static signalType ownSignalR;
-
-
+static signalResults checkSignalResults;
 
 class TrackerPoint
 {	
@@ -60,6 +60,7 @@ public:
 	cv::Point2f getCurrentPoint();
 
 	Connection registerSignal(const signalType::slot_type& slot);	
+	Connection registerEvaluateSignal(const signalResults::slot_type& slot);
 			
 private:
 	cv::VideoCapture inputCamera;
@@ -81,5 +82,6 @@ private:
 
 	// current position
 	cv::Point2f currentPoint;	
-	Connection signalConnection;		
+	Connection signalConnection;	
+	Connection signalResultsConnection;
 };

@@ -602,33 +602,29 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	if (isP1 & !isOK_PRight){
 		ProjectionMatrices.push_back(P1);
+		P1.copyTo(PRight);
 		isOK_PRight = true;
 		cout << "P1 choosed" << '\n' << endl;
 	}
 	if (isP2 & !isOK_PRight){
 		ProjectionMatrices.push_back(P2);
+		P2.copyTo(PRight);
 		isOK_PRight = true;
 		cout << "P2 choosed" << '\n' << endl;
 	}
 	if (isP3 & !isOK_PRight){
 		ProjectionMatrices.push_back(P3);
+		P3.copyTo(PRight);
 		isOK_PRight = true;
 		cout << "P3 choosed" << '\n' << endl;
 	}
 	if (isP4 & !isOK_PRight){
 		ProjectionMatrices.push_back(P4);
+		P4.copyTo(PRight);
 		isOK_PRight = true;
 		cout << "P4 choosed" << '\n' << endl;
 	}
 
-	cout << "Point 1" << endl;
-	cout << "X: " << points1_3D.at(0).x << " Y: " << points1_3D.at(0).y << " Z: " << points1_3D.at(0).z << '\n' << endl;
-	cout << "Point 2" << endl;
-	cout << "X: " << points2_3D.at(0).x << " Y: " << points2_3D.at(0).y << " Z: " << points2_3D.at(0).z << '\n' << endl;
-	cout << "Point 3" << endl;
-	cout << "X: " << points3_3D.at(0).x << " Y: " << points3_3D.at(0).y << " Z: " << points3_3D.at(0).z << '\n' << endl;
-	cout << "Point 4" << endl;
-	cout << "X: " << points4_3D.at(0).x << " Y: " << points4_3D.at(0).y << " Z: " << points4_3D.at(0).z << '\n' << endl;
 
 }
 
@@ -740,7 +736,10 @@ void StereoCamera::trackTestPointer(){
 
 	// register(connect) the signals to the slots(receivers) functions
 	trackerL.registerSignal(boost::bind(&StereoCamera::getLeftPoint, this, _1));
-	trackerR.registerSignal(boost::bind(&StereoCamera::getRightPoint,this, _1));	
+	trackerR.registerSignal(boost::bind(&StereoCamera::getRightPoint,this, _1));
+
+	// register(connect) the signal to results evaluation
+	trackerL.registerEvaluateSignal(boost::bind(&StereoCamera::evaluateResults, this));		
 
 	// create threads for reading data
 	std::function<void(TrackerPoint)> threadTrackingFunction = &TrackerPoint::startTracking;
@@ -777,26 +776,43 @@ void StereoCamera::printMatrix(cv::Mat Matrix, string matrixName){
 // get the left point from tracking test
 void StereoCamera::getLeftPoint(cv::Point2f leftPoint){
 
+	// update current point position
+	leftTrackedPoint = leftPoint;
 	cout << "Left Position is: " << leftPoint.x << " " << leftPoint.y << "\n" << endl;
 }
 
 // get the right point from tracking test
 void StereoCamera::getRightPoint(cv::Point2f rightPoint){
 
+	// update current point position
+	rightTrackedPoint = rightPoint;
 	cout << "Right Position is: " << rightPoint.x << " " << rightPoint.y << "\n" << endl;
+
 }
 
 // evaluate results from calibration
-void StereoCamera::evaluateResults(cv::Point2f leftPoint, cv::Point2f rightPoint){
+void StereoCamera::evaluateResults(void){
 
+	// take the found Projection matrices P,P' and triangulate the current point
+	cv::Mat triangulateTrackedPoint_3D;
+	vector<cv::Point2f> leftPoint, rightPoint;
+	leftPoint.push_back(leftTrackedPoint);
+	rightPoint.push_back(rightTrackedPoint);
+
+	triangulatePoints(PLeft, PRight, leftPoint, rightPoint, triangulateTrackedPoint_3D);
+
+	// converts from homogeneous
+	vector<cv::Point3f> trackedPoint_3D;
+	cv::convertPointsFromHomogeneous(triangulateTrackedPoint_3D.reshape(4,1), trackedPoint_3D);
+	
+	// prints X,Y,Z values
+	cout << "the current position of tracked point is: \n" 
+		<< "X " << trackedPoint_3D.front().x << "\n"
+		<< "Y " << trackedPoint_3D.front().y << "\n"
+		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;
 
 }
 
-// test boost signal
-void StereoCamera::receiveSignal(int i){
-
-	cout << "testing signal:"<< i <<" \n" << endl;
-}
 
 
 

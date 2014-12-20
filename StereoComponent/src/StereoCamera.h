@@ -55,6 +55,7 @@ private:
 	cv::Mat F_Matrix,E_Matrix;
 	cv::Mat PLeft, PRight;
 	int cameraGlobalStatus;	
+	cv::Point2f leftTrackedPoint, rightTrackedPoint;
 
 
 	/// set the camera state
@@ -120,9 +121,8 @@ private:
 	/// Get the right Point from Tracking test
 	void getRightPoint(cv::Point2f rightPoint);
 
-	/// Evaluate Results from calibration
-	void evaluateResults(cv::Point2f leftPoint, cv::Point2f rightPoint);
+	/// Evaluate Results from calibration using data from tracking test
+	void evaluateResults(void);
 
-	///
-	void receiveSignal(int i);
+	
 };

@@ -271,7 +271,9 @@ void TrackerPoint::doEmit(int x, int y){
 	default:
 		break;
 	}
-	
+
+	// emit check results signal
+	checkSignalResults();
 }
 
 
@@ -300,3 +302,9 @@ Connection TrackerPoint::registerSignal(const signalType::slot_type& slot){
 	return signalConnection;
 }
 
+// register slot to evaluate results from calibration process
+Connection TrackerPoint::registerEvaluateSignal(const signalResults::slot_type& slot){
+
+	signalResultsConnection = checkSignalResults.connect(slot);
+	return signalResultsConnection;
+}
