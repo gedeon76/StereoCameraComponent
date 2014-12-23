@@ -694,10 +694,7 @@ void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, 
 	int pointsSize = inputPoints.size();
 	for (int i = 0; i < pointsSize; i++){		
 
-		//tmpMatrix.at<double>(0, 0) = tmpNormalizedPoints.at(i).x;
-		//tmpMatrix.at<double>(1, 0) = tmpNormalizedPoints.at(i).y;
-		//tmpMatrix.at<double>(2, 0) = tmpNormalizedPoints.at(i).z;
-
+	
 		gemm(K.inv(DECOMP_SVD), tmpMatrix, 1.0, cv::noArray(), 0.0, tmpMatrix2);
 		currentNormalizedPoint.x = tmpMatrix2.at<double>(0,0);
 		currentNormalizedPoint.y = tmpMatrix2.at<double>(1,0);
@@ -793,24 +790,95 @@ void StereoCamera::getRightPoint(cv::Point2f rightPoint){
 // evaluate results from calibration
 void StereoCamera::evaluateResults(void){
 
+	// get the K matrices
+	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+	cv::Mat P_realLeft(3,4, CV_64F);
+	cv::Mat P_realRight(3,4, CV_64F);
+	
+	vector<cv::Point3f> inputLeft, inputRight;
+
 	// take the found Projection matrices P,P' and triangulate the current point
 	cv::Mat triangulateTrackedPoint_3D;
 	vector<cv::Point2f> leftPoint, rightPoint;
 	leftPoint.push_back(leftTrackedPoint);
 	rightPoint.push_back(rightTrackedPoint);
 
-	triangulatePoints(PLeft, PRight, leftPoint, rightPoint, triangulateTrackedPoint_3D);
+	// get the K,k' matrices
+	leftCamera.getIntrinsicMatrix(K_left);
+	rightCamera.getIntrinsicMatrix(K_right);	
+
+	// build the matrices P =K*PNormalized
+	//                    P' = K'*P'Normalized	
+	gemm(K_left,PLeft,1.0,cv::noArray(),0.0,P_realLeft);
+	gemm(K_right,PRight,1.0, cv::noArray(), 0.0, P_realRight);
+
+	triangulatePoints(P_realLeft, P_realRight, leftPoint, rightPoint, triangulateTrackedPoint_3D);
 
 	// converts from homogeneous
 	vector<cv::Point3f> trackedPoint_3D;
 	cv::convertPointsFromHomogeneous(triangulateTrackedPoint_3D.reshape(4,1), trackedPoint_3D);
 	
 	// prints X,Y,Z values
-	cout << "the current position of tracked point is: \n" 
+	cout << "the current position of tracked point is: \n"
 		<< "X " << trackedPoint_3D.front().x << "\n"
 		<< "Y " << trackedPoint_3D.front().y << "\n"
 		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;
 
+	// convert to homogeneous points
+	cv::convertPointsToHomogeneous(leftPoint, inputLeft);
+	cv::convertPointsToHomogeneous(rightPoint, inputRight);
+
+	// call linear LS triangulation
+	vector<cv::Point3f> point3D;
+	linearLSTriangulation(inputLeft,P_realLeft,inputRight, P_realRight,point3D);
+
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using linear LS triangulation is: \n"
+		<< "X " << point3D.front().x << "\n"
+		<< "Y " << point3D.front().y << "\n"
+		<< "Z " << point3D.front().z << "\n" << endl;
+
+		
+}
+
+// perform a linear triangulation
+// from More that technical web blog
+void StereoCamera::linearLSTriangulation(vector<cv::Point3f> PointLeft, cv::Mat P1, vector<cv::Point3f> PointRight, cv::Mat P2, vector<cv::Point3f> &triangulatedPoint){
+
+	// build matrix A for homogeneous equation system Ax = 0
+	// it assumes X = (x,y,z,1), for linear LS method
+	// which turns it into AX = B system,
+	// where A is a 4x3, X is 3x1 and B is 4x1
+
+	cv::Point3f Point1 = PointLeft.front();
+	cv::Point3f Point2 = PointRight.front();
+	cv::Point3f point3D;
+
+	int x1 = Point1.x;int y1 = Point1.y;
+	int x2 = Point2.x;int y2 = Point2.y;
+
+	cv::Mat A =(Mat_<double>(4,3) << x1*P1.at<double>(2, 0) - P1.at<double>(0, 0), x1*P1.at<double>(2, 1) - P1.at<double>(0, 1), x1*P1.at<double>(2, 2) - P1.at<double>(0, 2),
+									 y1*P1.at<double>(2, 0) - P1.at<double>(1, 0), y1*P1.at<double>(2, 1) - P1.at<double>(1, 1), y1*P1.at<double>(2, 2) - P1.at<double>(1, 2),
+									 x2*P2.at<double>(2, 0) - P2.at<double>(0, 0), x2*P2.at<double>(2, 1) - P2.at<double>(0, 1), x2*P2.at<double>(2, 2) - P2.at<double>(0, 2),
+									 y2*P2.at<double>(2, 0) - P2.at<double>(1, 0), y2*P2.at<double>(2, 1) - P2.at<double>(1, 1), y2*P2.at<double>(2, 2) - P2.at<double>(1, 2));
+
+
+	cv::Mat B = (Mat_<double>(4, 1) << -x1*P1.at<double>(2, 3) - P1.at<double>(0, 3),
+									   -y1*P1.at<double>(2, 3) - P1.at<double>(1, 3), 
+							           -x2*P2.at<double>(2, 3) - P2.at<double>(0, 3), 
+							           -y2*P2.at<double>(2, 3) - P2.at<double>(1, 3));
+
+	cv::Mat X;
+	solve(A, B, X, cv::DECOMP_SVD);
+
+	// return the results
+	point3D.x = X.at<double>(0,0);
+	point3D.y = X.at<double>(1,0);
+	point3D.z = X.at<double>(2,0);
+
+	triangulatedPoint.push_back(point3D);
+	
 }
 
 

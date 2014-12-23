@@ -67,6 +67,8 @@ private:
 	int cameraID;
 	string thisCameraName;
 	cameraIdentity myIdentity;
+	cv::Mat KMatrix,DistCoeffs;
+	cv::Point2d principalPoint;
 	//initial min and max HSV filter values.
 	//these will be changed using trackbars
 	int H_MIN,H_MAX;
@@ -82,6 +84,7 @@ private:
 
 	// current position
 	cv::Point2f currentPoint;	
+	cv::Point3f normalizedCurrentPoint;
 	Connection signalConnection;	
 	Connection signalResultsConnection;
 };

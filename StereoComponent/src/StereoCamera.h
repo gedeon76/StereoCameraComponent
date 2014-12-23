@@ -124,5 +124,8 @@ private:
 	/// Evaluate Results from calibration using data from tracking test
 	void evaluateResults(void);
 
+	/// Perform a linear triangulation
+	void linearLSTriangulation(vector<cv::Point3f> PointLeft, cv::Mat P1, vector<cv::Point3f> PointRight, cv::Mat P2, vector<cv::Point3f> &triangulatedPoint);
+
 	
 };

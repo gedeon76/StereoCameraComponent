@@ -32,6 +32,14 @@ TrackerPoint::TrackerPoint(int camera_ID, string cameraName, cv::Mat K_Matrix, c
 	// set camera name
 	thisCameraName.assign(cameraName);
 
+	// set the internal camera matrix and the distortion coefficients
+	K_Matrix.copyTo(KMatrix);
+	DistortionCoeffs.copyTo(DistCoeffs);
+
+	// add principal point offset
+	principalPoint.x = KMatrix.at<double>(0, 2);
+	principalPoint.y = KMatrix.at<double>(1, 2);
+
 	// windows names
 	windowName.assign("Original Image"+cameraName);
 	windowName1.assign("HSV Image"+cameraName);
@@ -78,8 +86,8 @@ void TrackerPoint::createTrackBars(){
 void TrackerPoint::drawObject(int x, int y, cv::Mat &frame){
 
 	//use some of the openCV drawing functions to draw crosshairs
-	//on your tracked image!
-
+	//on your tracked image!	
+	
 	//added 'if' and 'else' statements to prevent
 	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
 
@@ -181,7 +189,7 @@ void TrackerPoint::startTracking(){
 	bool useMorphologicalFilters = true;
 
 	//Matrix to store each frame of the webcam feed
-	cv::Mat cameraFeed;
+	cv::Mat cameraFeed, cameraFeedLensCorrected;
 
 	//matrix storage for HSV image
 	cv::Mat HSV;
@@ -213,8 +221,11 @@ void TrackerPoint::startTracking(){
 		//store image to matrix
 		capture.read(cameraFeed);
 
+		//undistort images
+		cv::undistort(cameraFeed, cameraFeedLensCorrected, KMatrix, DistCoeffs);
+
 		//convert frame from BGR to HSV colorspace
-		cvtColor(cameraFeed, HSV, cv::COLOR_BGR2HSV);
+		cvtColor(cameraFeedLensCorrected, HSV, cv::COLOR_BGR2HSV);
 
 		//filter HSV image between values and store filtered image to
 		//threshold matrix
@@ -229,15 +240,15 @@ void TrackerPoint::startTracking(){
 		//this function will return the x and y coordinates of the
 		//filtered object
 		if (trackObjects){
-			trackFilteredObject(x, y, threshold, cameraFeed);
+			trackFilteredObject(x, y, threshold, cameraFeedLensCorrected);
 
 			// send signal with point information
 			doEmit(x, y);			
 			}
-
+		
 		//show frames 
 		cv::imshow(windowName2, threshold);
-		cv::imshow(windowName, cameraFeed);
+		cv::imshow(windowName, cameraFeedLensCorrected);
 		cv::imshow(windowName1, HSV);
 
 		//delay 30ms so that screen can refresh.
@@ -251,8 +262,27 @@ void TrackerPoint::startTracking(){
 // emit a signal
 void TrackerPoint::doEmit(int x, int y){
 
+	
+	cv::Mat inputPoint = cv::Mat::zeros(3,3,CV_64F);
+	cv::Mat normPoint = cv::Mat::zeros(3,3,CV_64F);
+	cv::Point2f pointsToSend;
+	cv::Point3f normalizedPoint;
+		
 	currentPoint.x = x;
 	currentPoint.y = y;
+
+	//// normalized points x = K_inverted*x_fromTracking
+	//inputPoint.at<double>(0,0) = x;
+	//inputPoint.at<double>(1,0) = y;
+
+	//gemm(KMatrix.inv(cv::DECOMP_SVD),inputPoint,1.0, cv::noArray(), 0.0, normPoint);
+	//pointsToSend.x = normPoint.at<double>(0,0);
+	//pointsToSend.y = normPoint.at<double>(1,0);
+
+	//normalizedPoint.x = pointsToSend.x;
+	//normalizedPoint.y = pointsToSend.y;
+	//normalizedPoint.z = normPoint.at<double>(2,0);
+
 	boost::signals2::signal<cv::Point2f()> pointSignal;
 	pointSignal.connect(std::bind(&TrackerPoint::getCurrentPoint,this));
 
