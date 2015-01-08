@@ -229,8 +229,9 @@ bool StereoCamera::getFilePath(string &fileName,string &pathFound)
 	}
 
 	// built the directory for search 2 levels up
+	int levelUp = 2;
 	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
-	for (int i = 0; i < (pathElementsSize - 2); i++){
+	for (int i = 0; i < (pathElementsSize - levelUp); i++){
 		directory /= *itToBuildPath;
 		++itToBuildPath;
 	}
@@ -295,10 +296,15 @@ void StereoCamera::findMatches() {
 	string pathToFile;
 	Mat imageLeft, imageRight;
 	
+	leftCalibrationImageList.clear();
+	rightCalibrationImageList.clear();
 	getImageUsedFromCalibration(leftCalibrationImageList, rightCalibrationImageList);
 
-	imageLeft = leftCalibrationImageList.front();
-	imageRight = rightCalibrationImageList.front();
+	// choose the middle image pair to find the matches
+	int choosedOne = std::abs(std::round((leftCalibrationImageList.size() + rightCalibrationImageList.size()) / 4));
+
+	imageLeft = leftCalibrationImageList.at(choosedOne);
+	imageRight = rightCalibrationImageList.at(choosedOne);
 
 	// here we are going to use the A-KAZE detector and descriptor
 	// described in the article
@@ -437,24 +443,27 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	printMatrix(w, string("u"));
 	printMatrix(w, string("vt"));
 
-	// get E using normalized points
+	// get E using normalized points xnorm= Kinv*x
 
-	//vector<cv::Point2f> leftNormalizedPoints, rightNormalizedPoints;
-	//normalizePoints(K_left, leftPoints, leftNormalizedPoints);
-	//normalizePoints(K_right, rightPoints, rightNormalizedPoints);
+	vector<cv::Point2f> leftNormalPoints, rightNormalPoints;
+	vector<cv::Point3f> leftNormalizedPoints, rightNormalizedPoints;
+	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
+	normalizePoints(K_right, rightPoints, rightNormalizedPoints);
 
-	/*cv::Mat E_norm = findEssentialMat(leftNormalizedPoints, rightNormalizedPoints, focalLength, principalPoint, RANSAC, 0, 999);
+	convertPointsFromHomogeneous(leftNormalizedPoints, leftNormalPoints);
+	convertPointsFromHomogeneous(rightNormalizedPoints, rightNormalPoints);
+	cv::Mat E_norm = findEssentialMat(leftNormalPoints, rightNormalPoints, focalLength, principalPoint, RANSAC, 0, 999);
 	E_norm.copyTo(EsentialMatrix);
 	E_norm.copyTo(E_Matrix);
 
-	string Enorm_Name("Essential Matrix OpenCV normalized");
+	string Enorm_Name("Essential Matrix using normalized points x_norm = Kinverted*x");
 	printMatrix(E_norm, Enorm_Name);
 
 	cv::SVD::compute(E_norm, w, u, vt);
 
 	printMatrix(w, string("w"));
 	printMatrix(w, string("u"));
-	printMatrix(w, string("vt"));*/
+	printMatrix(w, string("vt"));
 
 
 }
@@ -534,6 +543,18 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 // get a pair of correct matrices P,P' from the essential matrix
 void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &ProjectionMatrices){
 
+	// get the K matrices
+	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+
+	// build the real P,P' matrices to perform which is the good one
+	cv::Mat P_realLeft(3, 4, CV_64F);
+	cv::Mat P_real_1(3, 4, CV_64F);
+	cv::Mat P_real_2(3, 4, CV_64F);
+	cv::Mat P_real_3(3, 4, CV_64F);
+	cv::Mat P_real_4(3, 4, CV_64F);
+
+
 	// build the normalized projection Cameras
 	// make the first projection matrix P = [I 0]
 	bool isOK_PRight = false;
@@ -579,13 +600,27 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 	vector<cv::Point2f> refinedMatchesLeft, refinedMatchesRight;
 	correctMatches(F_Matrix, leftPoints, rightPoints, refinedMatchesLeft, refinedMatchesRight);
 
+	// add the corresponding matrix K' to build the second matrix P'
+
+	// get the K,k' matrices
+	leftCamera.getIntrinsicMatrix(K_left);
+	rightCamera.getIntrinsicMatrix(K_right);
+
+	// build the matrices P =K*PNormalized
+	//                    P' = K'*P'Normalized	
+	gemm(K_left, PLeft, 1.0, cv::noArray(), 0.0, P_realLeft);
+	gemm(K_right, P1, 1.0, cv::noArray(), 0.0, P_real_1);
+	gemm(K_right, P2, 1.0, cv::noArray(), 0.0, P_real_2);
+	gemm(K_right, P3, 1.0, cv::noArray(), 0.0, P_real_3);
+	gemm(K_right, P4, 1.0, cv::noArray(), 0.0, P_real_4);
+
 	// check depth for the points
 	vector<cv::Point3f> points1_3D, points2_3D, points3_3D, points4_3D;
 
-	triangulatePoints(PLeft, P1, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints1);
-	triangulatePoints(PLeft, P2, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints2);
-	triangulatePoints(PLeft, P3, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints3);
-	triangulatePoints(PLeft, P4, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints4);
+	triangulatePoints(P_realLeft, P_real_1, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints1);
+	triangulatePoints(P_realLeft, P_real_2, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints2);
+	triangulatePoints(P_realLeft, P_real_3, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints3);
+	triangulatePoints(P_realLeft, P_real_4, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints4);
 
 	// convert From Homogeneous	
 	cv::convertPointsFromHomogeneous(triangulatedPoints1.reshape(4, 1), points1_3D);
@@ -666,11 +701,9 @@ bool StereoCamera::test3DPoint(vector<cv::Point3f> pointsToTest){
 
 	for (int i = 0; i < pointsToTest.size(); i++){
 	
-		xValue = std::signbit(pointsToTest.at(i).x);
-		yValue = std::signbit(pointsToTest.at(i).y);
 		zValue = std::signbit(pointsToTest.at(i).z);
 
-		if (!xValue & !yValue & !zValue){
+		if (!zValue){
 			isCorrect = true;
 		}
 		else{
@@ -682,23 +715,34 @@ bool StereoCamera::test3DPoint(vector<cv::Point3f> pointsToTest){
 	return isCorrect;
 }
 
-// normalize points with a K matrix
-void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints){
+// normalize points with a K matrix x_norm = Kinverted*x
+void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point3f> &normalizedPoints){
 
-	cv::Mat tmpMatrix,tmpMatrix2;
-	cv::Point2f currentNormalizedPoint;
+	cv::Mat tmpMatrix,tmpMatrix2, K_inverted;
+	cv::Point3f currentNormalizedPoint;
+	cv::Point3f currentNormPoint;
 	vector<cv::Point3f> tmpNormalizedPoints;
 	convertPointsToHomogeneous(inputPoints, tmpNormalizedPoints);
-	tmpMatrix = cv::Mat(tmpNormalizedPoints);
-	
-	int pointsSize = inputPoints.size();
-	for (int i = 0; i < pointsSize; i++){		
+	tmpMatrix = cv::Mat(3,1,CV_64F);
+	K_inverted = K.inv(DECOMP_SVD);
 
-	
-		gemm(K.inv(DECOMP_SVD), tmpMatrix, 1.0, cv::noArray(), 0.0, tmpMatrix2);
+	int pointsSize = inputPoints.size();
+	for (int i = 0; i < pointsSize-1; i++){		
+
+		tmpMatrix.at<double>(0,0) = tmpNormalizedPoints.at(i).x;
+		tmpMatrix.at<double>(1,0) = tmpNormalizedPoints.at(i).y;
+		tmpMatrix.at<double>(2,0) = tmpNormalizedPoints.at(i).z;
+
+		gemm(K_inverted, tmpMatrix, 1.0, cv::noArray(), 0.0, tmpMatrix2);
 		currentNormalizedPoint.x = tmpMatrix2.at<double>(0,0);
 		currentNormalizedPoint.y = tmpMatrix2.at<double>(1,0);
+		currentNormalizedPoint.z = tmpMatrix2.at<double>(2,0);
 		normalizedPoints.push_back(currentNormalizedPoint);
+
+		// save the normalized point
+		currentNormPoint.x = currentNormalizedPoint.x;
+		currentNormPoint.y = currentNormalizedPoint.y;
+		currentNormPoint.z = currentNormalizedPoint.z;
 		
 	}
 }

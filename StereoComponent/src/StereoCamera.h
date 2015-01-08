@@ -107,7 +107,7 @@ private:
 	bool test3DPoint(vector<cv::Point3f> pointsToTest);
 
 	/// Normalize points for finding E matrix
-	void normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point2f> &normalizedPoints);
+	void normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, vector<cv::Point3f> &normalizedPoints);
 
 	/// Perform tracking from a pointer
 	void trackTestPointer();

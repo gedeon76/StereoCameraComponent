@@ -225,7 +225,7 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 			{
 
 				string imageName{ "Image" + string(std::to_string(imageCounter)) + cameraName + ".jpg" };
-				boost::filesystem::path p{ "/" };	// add a slash for generate a portable string
+				boost::filesystem::path p{ "/" };	// add a slash to generate a portable string
 				filename.assign(resultsPath.string() + p.generic_string() + imageName);
 
 				vector<int> compression_params;
@@ -523,9 +523,10 @@ bool CameraCalibration::getPathForThisFile(string &fileName, string &pathFound)
 		pathElementsSize = pathElementsSize + 1;
 	}
 
-	// built the directory for search 1 level up
+	// built the directory to search 1 level up
+	int levelUp = 2;
 	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
-	for (int i = 0; i < (pathElementsSize - 1); i++){
+	for (int i = 0; i < (pathElementsSize - levelUp); i++){
 		directory /= *itToBuildPath;
 		++itToBuildPath;
 	}
