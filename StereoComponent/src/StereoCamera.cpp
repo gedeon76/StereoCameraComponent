@@ -430,6 +430,10 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	cv::Point2d principalPoint((CameraUsefulParametersLeft.principalPointX + CameraUsefulParametersRight.principalPointX) / 2,
 		(CameraUsefulParametersLeft.principalPointY + CameraUsefulParametersRight.principalPointY) / 2);
 
+	// save these values to further calculus
+	averageFocalLength = focalLength;
+	averagePrincipalPoint = principalPoint;
+
 	cv::Mat E_openCV = findEssentialMat(leftPoints,rightPoints,focalLength,principalPoint,RANSAC,0.999);
 	E_openCV.copyTo(EsentialMatrix);
 	E_openCV.copyTo(E_Matrix);
@@ -444,7 +448,6 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	printMatrix(w, string("vt"));
 
 	// get E using normalized points xnorm= Kinv*x
-
 	vector<cv::Point2f> leftNormalPoints, rightNormalPoints;
 	vector<cv::Point3f> leftNormalizedPoints, rightNormalizedPoints;
 	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
@@ -452,7 +455,8 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	convertPointsFromHomogeneous(leftNormalizedPoints, leftNormalPoints);
 	convertPointsFromHomogeneous(rightNormalizedPoints, rightNormalPoints);
-	cv::Mat E_norm = findEssentialMat(leftNormalPoints, rightNormalPoints, focalLength, principalPoint, RANSAC, 0, 999);
+
+	cv::Mat E_norm = findEssentialMat(leftNormalPoints, rightNormalPoints, focalLength, principalPoint, RANSAC, 0.999);
 	E_norm.copyTo(EsentialMatrix);
 	E_norm.copyTo(E_Matrix);
 
@@ -461,10 +465,12 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	cv::SVD::compute(E_norm, w, u, vt);
 
+	// check SVD values, 2 have to be equal and the last must be zero
 	printMatrix(w, string("w"));
-	printMatrix(w, string("u"));
-	printMatrix(w, string("vt"));
+	//printMatrix(u, string("u"));
+	//printMatrix(vt, string("vt"));
 
+	cout << "Det(E)= " << cv::determinant(E_norm) << "\n" << endl;
 
 }
 
@@ -549,119 +555,65 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	// build the real P,P' matrices to perform which is the good one
 	cv::Mat P_realLeft(3, 4, CV_64F);
-	cv::Mat P_real_1(3, 4, CV_64F);
-	cv::Mat P_real_2(3, 4, CV_64F);
-	cv::Mat P_real_3(3, 4, CV_64F);
-	cv::Mat P_real_4(3, 4, CV_64F);
-
-
-	// build the normalized projection Cameras
-	// make the first projection matrix P = [I 0]
-	bool isOK_PRight = false;
-	PLeft = Mat::eye(3, 4, CV_64F);
-	ProjectionMatrices.push_back(PLeft);
-
-	// built the alternatives for the second projection matrix 
-	// according to section 9.6 from Zisserman book on 2nd edition
-	cv::Mat P1(3, 4, CV_64F), P2(3, 4, CV_64F), P3(3, 4, CV_64F), P4(3, 4, CV_64F);
-	cv::Mat R1, R2, t;
-
-	decomposeEssentialMat(E_Matrix, R1, R2, t);
-
-	// build the projection matrices options
-	build_Projection_Matrix(P1, R1, t);
-	build_Projection_Matrix(P2, R1,-t);
-	build_Projection_Matrix(P3, R2, t);
-	build_Projection_Matrix(P4, R2,-t);
-
-	string testP("P");
-	printMatrix(PLeft, testP);
-
-	string testP1("P1");
-	printMatrix(P1, testP1);
-
-	string testP2("P2");
-	printMatrix(P2, testP2);
-
-	string testP3("P3");
-	printMatrix(P3, testP3);
-
-	string testP4("P4");
-	printMatrix(P4, testP4);
+	cv::Mat P_real_recovered(3, 4, CV_64F);
+	cv::Mat P_recovered(3, 4, CV_64F);
 
 	// Find the correct P matrix
-	cv::Mat triangulatedPoints1,triangulatedPoints2, triangulatedPoints3, triangulatedPoints4;
-	vector<cv::Point2f> leftPoints,rightPoints;
+	cv::Mat triangulatedPointsRecovered;
+	vector<cv::Point2f> leftPoints, rightPoints;
 
+	// Get the matched points
 	KeyPoint::convert(matchesLeft, leftPoints);
 	KeyPoint::convert(matchesRight, rightPoints);
+
+	vector<cv::Point2f> leftNormalPoints, rightNormalPoints;
+	vector<cv::Point3f> leftNormalizedPoints, rightNormalizedPoints;
+	leftCamera.getIntrinsicMatrix(K_left);
+	rightCamera.getIntrinsicMatrix(K_right);
+
+	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
+	normalizePoints(K_right, rightPoints, rightNormalizedPoints);
+	convertPointsFromHomogeneous(leftNormalizedPoints, leftNormalPoints);
+	convertPointsFromHomogeneous(rightNormalizedPoints, rightNormalPoints);
 
 	// refine the matches
 	vector<cv::Point2f> refinedMatchesLeft, refinedMatchesRight;
 	correctMatches(F_Matrix, leftPoints, rightPoints, refinedMatchesLeft, refinedMatchesRight);
 
-	// add the corresponding matrix K' to build the second matrix P'
+	// build the normalized projection Cameras
+	// make the first projection matrix P = [I 0]
+	PLeft = Mat::eye(3, 4, CV_64F);
+	ProjectionMatrices.push_back(PLeft);
 
-	// get the K,k' matrices
-	leftCamera.getIntrinsicMatrix(K_left);
-	rightCamera.getIntrinsicMatrix(K_right);
+	// Find the R and t from E matrix using recoverPose function
+	// build the alternatives for the second projection matrix 
+	// according to section 9.6 from Zisserman book on 2nd edition
+	// it is implemented at the recoverPose OpenCV function
+	cv::Mat R_recovered, t_recovered, mask;
 
-	// build the matrices P =K*PNormalized
-	//                    P' = K'*P'Normalized	
-	gemm(K_left, PLeft, 1.0, cv::noArray(), 0.0, P_realLeft);
-	gemm(K_right, P1, 1.0, cv::noArray(), 0.0, P_real_1);
-	gemm(K_right, P2, 1.0, cv::noArray(), 0.0, P_real_2);
-	gemm(K_right, P3, 1.0, cv::noArray(), 0.0, P_real_3);
-	gemm(K_right, P4, 1.0, cv::noArray(), 0.0, P_real_4);
+	recoverPose(E_Matrix, leftNormalPoints, rightNormalPoints, R_recovered, t_recovered,
+		averageFocalLength,averagePrincipalPoint,mask);
 
-	// check depth for the points
-	vector<cv::Point3f> points1_3D, points2_3D, points3_3D, points4_3D;
+	// build the projection matrices options
+	build_Projection_Matrix(P_recovered, R_recovered,t_recovered);
 
-	triangulatePoints(P_realLeft, P_real_1, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints1);
-	triangulatePoints(P_realLeft, P_real_2, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints2);
-	triangulatePoints(P_realLeft, P_real_3, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints3);
-	triangulatePoints(P_realLeft, P_real_4, refinedMatchesLeft, refinedMatchesRight, triangulatedPoints4);
+	string testPRight("P_Recovered");
+	printMatrix(P_recovered, testPRight);	
 
-	// convert From Homogeneous	
-	cv::convertPointsFromHomogeneous(triangulatedPoints1.reshape(4, 1), points1_3D);
-	cv::convertPointsFromHomogeneous(triangulatedPoints2.reshape(4, 1), points2_3D);
-	cv::convertPointsFromHomogeneous(triangulatedPoints3.reshape(4, 1), points3_3D);
-	cv::convertPointsFromHomogeneous(triangulatedPoints4.reshape(4, 1), points4_3D);
+	// save the right projection Matrix
+	ProjectionMatrices.push_back(P_recovered);
+	P_real_recovered.copyTo(PRight);
+	cout << " P_real_recovered choosed" << '\n' << endl;
 
-	// check the results for a given point
-	bool isP1, isP2, isP3, isP4;
-	isP1 = test3DPoint(points1_3D);
-	isP2 = test3DPoint(points2_3D);
-	isP3 = test3DPoint(points3_3D);
-	isP4 = test3DPoint(points4_3D);
+	// test points depth
+	vector<cv::Point3f> testTriangulatedPoints;
+	triangulatePoints(PLeft, P_recovered, leftNormalPoints, rightNormalPoints, triangulatedPointsRecovered);
 
-	if (isP1 & !isOK_PRight){
-		ProjectionMatrices.push_back(P1);
-		P1.copyTo(PRight);
-		isOK_PRight = true;
-		cout << "P1 choosed" << '\n' << endl;
-	}
-	if (isP2 & !isOK_PRight){
-		ProjectionMatrices.push_back(P2);
-		P2.copyTo(PRight);
-		isOK_PRight = true;
-		cout << "P2 choosed" << '\n' << endl;
-	}
-	if (isP3 & !isOK_PRight){
-		ProjectionMatrices.push_back(P3);
-		P3.copyTo(PRight);
-		isOK_PRight = true;
-		cout << "P3 choosed" << '\n' << endl;
-	}
-	if (isP4 & !isOK_PRight){
-		ProjectionMatrices.push_back(P4);
-		P4.copyTo(PRight);
-		isOK_PRight = true;
-		cout << "P4 choosed" << '\n' << endl;
-	}
-
+	// convert from homogeneous
+	cv::convertPointsFromHomogeneous(triangulatedPointsRecovered.reshape(4, 1), testTriangulatedPoints);
 
 }
+
 
 // find  a 3d point position
 void StereoCamera::find3DPoint() {
@@ -727,7 +679,7 @@ void StereoCamera::normalizePoints(cv::Mat K, vector<cv::Point2f> &inputPoints, 
 	K_inverted = K.inv(DECOMP_SVD);
 
 	int pointsSize = inputPoints.size();
-	for (int i = 0; i < pointsSize-1; i++){		
+	for (int i = 0; i < pointsSize; i++){		
 
 		tmpMatrix.at<double>(0,0) = tmpNormalizedPoints.at(i).x;
 		tmpMatrix.at<double>(1,0) = tmpNormalizedPoints.at(i).y;
@@ -844,9 +796,17 @@ void StereoCamera::evaluateResults(void){
 
 	// take the found Projection matrices P,P' and triangulate the current point
 	cv::Mat triangulateTrackedPoint_3D;
-	vector<cv::Point2f> leftPoint, rightPoint;
+	vector<cv::Point2f> leftPoint, rightPoint, leftTestPoint,rightTestPoint;
+	vector<cv::Point3f> leftNormalizedPoint, rightNormalizedPoint;
+
 	leftPoint.push_back(leftTrackedPoint);
 	rightPoint.push_back(rightTrackedPoint);
+
+	normalizePoints(K_left, leftPoint, leftNormalizedPoint);
+	normalizePoints(K_right, rightPoint, rightNormalizedPoint);
+
+	convertPointsFromHomogeneous(leftNormalizedPoint, leftTestPoint);
+	convertPointsFromHomogeneous(rightNormalizedPoint, rightTestPoint);
 
 	// get the K,k' matrices
 	leftCamera.getIntrinsicMatrix(K_left);
@@ -857,7 +817,7 @@ void StereoCamera::evaluateResults(void){
 	gemm(K_left,PLeft,1.0,cv::noArray(),0.0,P_realLeft);
 	gemm(K_right,PRight,1.0, cv::noArray(), 0.0, P_realRight);
 
-	triangulatePoints(P_realLeft, P_realRight, leftPoint, rightPoint, triangulateTrackedPoint_3D);
+	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateTrackedPoint_3D);
 
 	// converts from homogeneous
 	vector<cv::Point3f> trackedPoint_3D;
@@ -875,7 +835,7 @@ void StereoCamera::evaluateResults(void){
 
 	// call linear LS triangulation
 	vector<cv::Point3f> point3D;
-	linearLSTriangulation(inputLeft,P_realLeft,inputRight, P_realRight,point3D);
+	linearLSTriangulation(leftNormalizedPoint,PLeft,rightNormalizedPoint, PRight,point3D);
 
 	// prints X,Y,Z values
 	cout << "the current position of tracked point using linear LS triangulation is: \n"

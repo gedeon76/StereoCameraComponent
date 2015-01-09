@@ -523,7 +523,7 @@ bool CameraCalibration::getPathForThisFile(string &fileName, string &pathFound)
 		pathElementsSize = pathElementsSize + 1;
 	}
 
-	// built the directory to search 1 level up
+	// built the directory to search 2 levels up from current directory
 	int levelUp = 2;
 	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
 	for (int i = 0; i < (pathElementsSize - levelUp); i++){
