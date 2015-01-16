@@ -54,6 +54,7 @@ private:
 	cv::Mat imageMatches;
 	cv::Mat F_Matrix,E_Matrix;
 	cv::Mat PLeft, PRight;
+	cv::Mat KLeft, KRight;
 	int cameraGlobalStatus;	
 	float averageFocalLength;
 	cv::Point2d averagePrincipalPoint;

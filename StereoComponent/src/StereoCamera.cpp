@@ -294,10 +294,13 @@ void StereoCamera::findMatches() {
 	// get the images
 	bool fileFound;
 	string pathToFile;
-	Mat imageLeft, imageRight;
-	
+	Mat imageLeft, imageRight;	
+
+	matchesLeft.clear();
+	matchesRight.clear();
 	leftCalibrationImageList.clear();
 	rightCalibrationImageList.clear();
+
 	getImageUsedFromCalibration(leftCalibrationImageList, rightCalibrationImageList);
 
 	// choose the middle image pair to find the matches
@@ -357,16 +360,97 @@ void StereoCamera::findMatches() {
 
 // find the fundamental matrix
 void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
-	
+
 	// find matches between an image pair
+	cv::Size imageSize;
 	vector<cv::Point2f> leftPoints, rightPoints;
+	double epsilon = 0.000001;
+	int attempsCounter = 0;
+	int matchesNumber = 8;
+	int maxAttempsLimit = 10;
+	bool foundMinimumMatchesNumber = false;
+
+	// find the matches
 	findMatches();
 
 	// select the RANSAC method to calculate the matrix
 	KeyPoint::convert(matchesLeft, leftPoints);
 	KeyPoint::convert(matchesRight, rightPoints);
-	F_Matrix = findFundamentalMat(leftPoints,rightPoints,FM_RANSAC,3,0.999);
-	F_Matrix.copyTo(F_MatrixExtern);
+
+	// check a minimum number of matches, in our case at least 8 matches
+	while (!foundMinimumMatchesNumber){
+		if (matchesLeft.size() >= matchesNumber){
+
+			F_Matrix = findFundamentalMat(leftPoints, rightPoints, FM_RANSAC, 3, 0.999);
+			F_Matrix.copyTo(F_MatrixExtern);
+			foundMinimumMatchesNumber = true;
+		}
+		else{
+			findMatches();
+		}
+		attempsCounter = attempsCounter + 1;
+		if (attempsCounter >= maxAttempsLimit){
+
+			cout << "Max number of attemps trying to find a minimum number of matches has been reached...\n" << endl;
+			cout << "Try again using another image pair \n" << endl;
+			exit(0);
+		}
+	}
+	
+
+	// Draw the epipolar lines
+	cv::Mat imageLeft, imageRight;
+
+	// choose the middle image pair to check F results
+	int choosedOne = std::abs(std::round((leftCalibrationImageList.size() + rightCalibrationImageList.size()) / 4));
+
+	imageLeft = leftCalibrationImageList.at(choosedOne);
+	imageRight = rightCalibrationImageList.at(choosedOne);
+	imageSize = imageLeft.size();
+
+	vector<cv::Point3f> leftEpipolarLines, rightEpipolarLines;
+	computeCorrespondEpilines(leftPoints, 1, F_Matrix, rightEpipolarLines);
+	computeCorrespondEpilines(rightPoints, 2, F_Matrix, leftEpipolarLines);
+
+	int linesNumber = leftPoints.size();
+	float aL, bL, cL, aR, bR, cR;
+	float x1L, y1L, x2L, y2L;
+	float x1R, y1R, x2R, y2R;
+	cv::Point point1L, point2L, point1R, point2R;
+	for (int i = 0; i < linesNumber; i++){
+
+		// find the imtercepts
+		aL = leftEpipolarLines.at(i).x; aR = rightEpipolarLines.at(i).x;
+		bL = leftEpipolarLines.at(i).y; bR = rightEpipolarLines.at(i).y;
+		cL = leftEpipolarLines.at(i).z; cR = rightEpipolarLines.at(i).z;
+
+		// calculate points
+		if (std::abs(bL) > epsilon){
+			x1L = 0; y1L = -cL/bL; x2L = imageSize.width; y2L = -(aL*x2L)/bL - (cL/bL);
+		}
+		else{
+			x1L = -cL/aL; y1L = 0; y2L = imageSize.height; x2L = -(bL*y2L)/aL - (cL/aL);
+		}
+
+		if (std::abs(bR) > epsilon){
+			x1R = 0; y1R = -cR/bR; x2R = imageSize.width; y2R = -(aR*x2R)/bR - (cR/bR);
+		}
+		else{
+			x1R = -cR/aR; y1R = 0; y2R = imageSize.height; x2R = -(bR*y2R)/aR - (cR/aR);
+		}
+
+		point1L.x = x1L; point1L.y = y1L;
+		point2L.x = x2L; point2L.y = y2L;
+		point1R.x = x1R; point1R.y = y1R;
+		point2R.x = x2R; point2R.y = y2R;
+
+		line(imageLeft, point1L, point2L,Scalar(0,0,255));
+		line(imageRight, point1R, point2R,Scalar(0, 0, 255));
+	}
+
+	// show epipolar lines
+	cv::imshow("Left Epipolar Lines",imageLeft);
+	cv::imshow("Right Epipolar Lines", imageRight);
 
 	// print the matrix
 	string F_Name("Fundamental Matrix");
@@ -384,8 +468,12 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
 	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
 
+	// save the K matrices	
 	leftCamera.getIntrinsicMatrix(K_left);
 	rightCamera.getIntrinsicMatrix(K_right);
+
+	K_left.copyTo(KLeft);
+	K_right.copyTo(KRight);
 
 	// print internal matrices
 	string KL_Name("kLeft Matrix");
@@ -602,8 +690,8 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 
 	// save the right projection Matrix
 	ProjectionMatrices.push_back(P_recovered);
-	P_real_recovered.copyTo(PRight);
-	cout << " P_real_recovered choosed" << '\n' << endl;
+	P_recovered.copyTo(PRight);
+	cout << " P_recovered choosed" << '\n' << endl;
 
 	// test points depth
 	vector<cv::Point3f> testTriangulatedPoints;
@@ -612,6 +700,7 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 	// convert from homogeneous
 	cv::convertPointsFromHomogeneous(triangulatedPointsRecovered.reshape(4, 1), testTriangulatedPoints);
 
+	
 }
 
 
@@ -723,6 +812,87 @@ void StereoCamera::trackTestPointer(){
 	leftCamera.getCameraID(cameraID_Left);
 	rightCamera.getCameraID(cameraID_Right);
 
+	// rectify the stereo head 
+	// to get a correct alignment and perspective of correct results
+	cameraData camL, camR;
+	leftCamera.getCameraUsefulParameters(camL);
+	rightCamera.getCameraUsefulParameters(camR);
+	cv::Size imgSize = cv::Size(camL.imageWidth,camL.imageHeight);
+
+	cv::Mat R1, R2, P1, P2, Q, R, t;
+	vector<cv::Mat> stereoTransform;
+	getStereoTransforms(stereoTransform);
+
+	stereoTransform.at(0).copyTo(R);
+	stereoTransform.at(1).copyTo(t);
+ 	
+	stereoRectify(K_left, DistortionCoeffsLeft,
+				  K_right,DistortionCoeffsRight,
+				  imgSize, R, t, R1, R2, P1, P2, Q, 0, 1,imgSize);
+
+	// check for image displacement
+	bool isVerticalStereo = fabs(P2.at<double>(1,3)) > fabs(P2.at<double>(0,3));
+
+
+	// Use F matrix to perform uncalibrated rectification
+	cv::Mat H1, H2;
+	vector<cv::Point2f> leftPoints, rightPoints;
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+
+	stereoRectifyUncalibrated(leftPoints,rightPoints,F_Matrix,imgSize,H1,H2,3);
+	R1 = K_left.inv(cv::DECOMP_SVD)*H1*K_left;
+	R2 = K_right.inv(cv::DECOMP_SVD)*H1*K_right;
+	K_left.copyTo(P1);
+	K_right.copyTo(P2);
+
+	// compute and display rectification
+
+	cv::Mat mapX_L,mapY_L;
+	cv::Mat mapX_R, mapY_R;
+	initUndistortRectifyMap(KLeft,DistortionCoeffsLeft,R1,P1,imgSize,CV_16SC2,mapX_L,mapY_L);
+	initUndistortRectifyMap(KRight, DistortionCoeffsRight, R2, P2, imgSize, CV_16SC2, mapX_R, mapY_R);
+
+	cv::Mat canvas;
+	double sf;
+	int w, h;
+
+	// create the matrix to show the rectification
+	sf = 600. / MAX(imgSize.width, imgSize.height);
+	w = std::round(imgSize.width*sf);
+	h = std::round(imgSize.height*sf);
+
+	if (!isVerticalStereo){
+
+		canvas.create(h,w*2, CV_8UC3);
+	}
+	else{
+		canvas.create(h*2, w, CV_8UC3);
+	}
+
+	// perform the remapping
+	// choose the middle image pair used to find the matches to perform the rectification
+	cv::Mat leftImg, rightImg;
+	int choosedOne = std::abs(std::round((leftCalibrationImageList.size() + rightCalibrationImageList.size()) / 4));
+
+	leftImg = leftCalibrationImageList.at(choosedOne);
+	rightImg = rightCalibrationImageList.at(choosedOne);
+
+	cv::Mat dstImgL, dstImgR, cImg, canvasPart;	
+
+	remap(leftImg, dstImgL, mapX_L, mapY_L, cv::INTER_LINEAR,BORDER_CONSTANT,Scalar(0,0,0));
+	remap(rightImg, dstImgR, mapX_R, mapY_R, cv::INTER_LINEAR,BORDER_CONSTANT, Scalar(0, 0, 0));
+	
+	//cvtColor(dstImg, cImg, cv::COLOR_GRAY2BGR);
+	//canvasPart = !isVerticalStereo? canvas(Rect(w*k,0,w,h)):canvas(Rect(0,h*k,w,h));
+	//resize(cImg, canvasPart,canvasPart.size(),0,0,cv::INTER_AREA);
+
+
+	// sow rectified image
+	cv::imshow("rectified left",dstImgL);
+	cv::imshow("rectified right", dstImgR);
+
+
 	// start tracking
 	TrackerPoint trackerL(cameraID_Left, cameraName_Left, K_left, DistortionCoeffsLeft);
 	TrackerPoint trackerR(cameraID_Right,cameraName_Right,K_right, DistortionCoeffsRight);	
@@ -802,20 +972,19 @@ void StereoCamera::evaluateResults(void){
 	leftPoint.push_back(leftTrackedPoint);
 	rightPoint.push_back(rightTrackedPoint);
 
-	normalizePoints(K_left, leftPoint, leftNormalizedPoint);
-	normalizePoints(K_right, rightPoint, rightNormalizedPoint);
+	normalizePoints(KLeft, leftPoint, leftNormalizedPoint);
+	normalizePoints(KRight, rightPoint, rightNormalizedPoint);
 
 	convertPointsFromHomogeneous(leftNormalizedPoint, leftTestPoint);
-	convertPointsFromHomogeneous(rightNormalizedPoint, rightTestPoint);
-
-	// get the K,k' matrices
-	leftCamera.getIntrinsicMatrix(K_left);
-	rightCamera.getIntrinsicMatrix(K_right);	
+	convertPointsFromHomogeneous(rightNormalizedPoint, rightTestPoint);		
 
 	// build the matrices P =K*PNormalized
 	//                    P' = K'*P'Normalized	
-	gemm(K_left,PLeft,1.0,cv::noArray(),0.0,P_realLeft);
-	gemm(K_right,PRight,1.0, cv::noArray(), 0.0, P_realRight);
+	gemm(KLeft,PLeft,1.0,cv::noArray(),0.0,P_realLeft);
+	gemm(KRight,PRight,1.0,cv::noArray(),0.0, P_realRight);
+
+	// scaling factor
+	double lambda = 1.0;
 
 	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateTrackedPoint_3D);
 
@@ -825,9 +994,9 @@ void StereoCamera::evaluateResults(void){
 	
 	// prints X,Y,Z values
 	cout << "the current position of tracked point is: \n"
-		<< "X " << trackedPoint_3D.front().x << "\n"
-		<< "Y " << trackedPoint_3D.front().y << "\n"
-		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;
+		<< "X " << lambda*trackedPoint_3D.front().x << "\n"
+		<< "Y " << lambda*trackedPoint_3D.front().y << "\n"
+		<< "Z " << lambda*trackedPoint_3D.front().z << "\n" << endl;
 
 	// convert to homogeneous points
 	cv::convertPointsToHomogeneous(leftPoint, inputLeft);
@@ -835,13 +1004,13 @@ void StereoCamera::evaluateResults(void){
 
 	// call linear LS triangulation
 	vector<cv::Point3f> point3D;
-	linearLSTriangulation(leftNormalizedPoint,PLeft,rightNormalizedPoint, PRight,point3D);
+	linearLSTriangulation(inputLeft,P_realLeft,inputRight,P_realRight,point3D);
 
 	// prints X,Y,Z values
 	cout << "the current position of tracked point using linear LS triangulation is: \n"
-		<< "X " << point3D.front().x << "\n"
-		<< "Y " << point3D.front().y << "\n"
-		<< "Z " << point3D.front().z << "\n" << endl;
+		<< "X " << lambda*point3D.front().x << "\n"
+		<< "Y " << lambda*point3D.front().y << "\n"
+		<< "Z " << lambda*point3D.front().z << "\n" << endl;
 
 		
 }
