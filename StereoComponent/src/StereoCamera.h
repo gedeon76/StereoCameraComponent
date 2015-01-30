@@ -85,6 +85,12 @@ private:
 	/// Find the similar matches between the images of each camera
 	void findMatches();
 
+	/// Sort the matches using the Hat Matrix, see Ola Millnert Master thesis Feb'2006
+	void SortMatchesUsingHatMatrix(vector<sortMatch> &sortedMatches);
+
+	/// Get the Median from a given vector
+	void getMedian(vector<double> vectorInput, double &medianValue);
+
 	/// Find the fundamental matrix between the images of the two camera
 	void findFundamentalMatrix(cv::Mat &F_Matrix);
 

@@ -358,6 +358,104 @@ void StereoCamera::findMatches() {
 }
 
 
+// sort the matches using the Hat Matrix method, see Ola Millnert Master thesis Feb'2006
+void StereoCamera::SortMatchesUsingHatMatrix(vector<sortMatch> &sortedMatches){
+
+	// get the size of the matches
+	int matchesNumber = good_matches.size();
+
+	// get the matches
+	vector<cv::Point3f> leftNormPoints, rightNormPoints;
+	vector<cv::Point2f> leftPoints, rightPoints;
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+
+	normalizePoints(KLeft, leftPoints, leftNormPoints);
+	normalizePoints(KRight, rightPoints, rightNormPoints);
+
+	// build the A matrix from Ah = 0
+	vector<sortMatch> outliernessValues;
+	cv::Mat A, Hat_Matrix,tmpMatrix, tmpMatrix2;
+	cv::Mat row_A(1,9,CV_64F);
+
+	for (int i = 0; i < matchesNumber; i++){
+
+		row_A.at<double>(0, 0) = rightNormPoints.at(i).x*leftNormPoints.at(i).x;
+		row_A.at<double>(0, 1) = rightNormPoints.at(i).x*leftNormPoints.at(i).y;
+		row_A.at<double>(0, 2) = rightNormPoints.at(i).x*leftNormPoints.at(i).z;
+
+		row_A.at<double>(0, 3) = rightNormPoints.at(i).y*leftNormPoints.at(i).x;
+		row_A.at<double>(0, 4) = rightNormPoints.at(i).y*leftNormPoints.at(i).y;
+		row_A.at<double>(0, 5) = rightNormPoints.at(i).y*leftNormPoints.at(i).z;
+
+		row_A.at<double>(0, 6) = rightNormPoints.at(i).z*leftNormPoints.at(i).x;
+		row_A.at<double>(0, 7) = rightNormPoints.at(i).z*leftNormPoints.at(i).y;
+		row_A.at<double>(0, 8) = rightNormPoints.at(i).z*leftNormPoints.at(i).z;
+
+		// add new (correspondence)row to matrix
+		A.push_back(row_A);	
+	}
+
+	// build the hat Matrix Hat_Matrix = A*(Atransp*A)inv*ATransp
+	gemm(A, A, 1.0, cv::noArray(), 0.0, tmpMatrix,cv::GEMM_1_T);
+	tmpMatrix2 = tmpMatrix.inv(cv::DECOMP_SVD);
+
+	gemm(A,tmpMatrix2,1.0,cv::noArray(),0.0,tmpMatrix);
+	gemm(tmpMatrix, A, 1.0, cv::noArray(), 0.0,Hat_Matrix, cv::GEMM_2_T);
+
+	sortMatch currentMatch;
+	for (int i = 0; i < Hat_Matrix.size().width; i++){
+		for (int j = 0; j < Hat_Matrix.size().height; j++){
+			if (i == j){
+				currentMatch.currentIndex = 0;
+				currentMatch.originalIndex = i;
+				currentMatch.outliernessMeasure = Hat_Matrix.at<double>(i, j);
+				currentMatch.leftPoint = leftNormPoints.at(i);
+				currentMatch.rightPoint = rightNormPoints.at(i);
+				outliernessValues.push_back(currentMatch);
+			}
+		}
+	}
+
+	// sort the matches using a lambda function 
+	// the sort value is the diagonal of the Hat Matrix
+	// low values are better matches, larges ones are taken as outliers
+	std::sort(outliernessValues.begin(), outliernessValues.end(), 
+		[](const sortMatch &a, const sortMatch &b){
+		return b.outliernessMeasure > a.outliernessMeasure; });
+
+	// save the sorted matches
+	sortedMatches = outliernessValues;
+
+}
+
+
+// get the median from a given vector of values
+void StereoCamera::getMedian(vector<double>vectorInput, double &medianValue){
+
+	// the first step: order the values
+	double median=0;
+	std::sort(vectorInput.begin(), vectorInput.end());
+
+	int vectorSize = vectorInput.size();
+	double medianType = std::fmod(vectorSize, 2);
+	int isEven = std::round(medianType);
+	
+	// the second step: calculate the median
+	switch (isEven){
+	case 0: // vector numbers is even
+		median = 0.5*(vectorInput.at(vectorSize / 2) + vectorInput.at(0 + vectorSize / 2));
+		break;
+	case 1: // vector numbers is odd
+		median = vectorInput.at((vectorSize+1)/2);
+		break;
+	}
+
+	// return the median value
+	medianValue = median;
+
+}
+
 // find the fundamental matrix
 void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
 
@@ -508,11 +606,6 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	normalized_E.copyTo(E_Matrix);
 
-	// find the matrix E directly
-	vector<cv::Point2f> leftPoints, rightPoints, leftPointsNormalized, rightPointsNormalized;
-	KeyPoint::convert(matchesLeft, leftPoints);
-	KeyPoint::convert(matchesRight, rightPoints);
-
 	// get an average value for the focal lengths and principal points
 	double focalLength = (CameraUsefulParametersLeft.focalLength + CameraUsefulParametersRight.focalLength) / 2;
 	cv::Point2d principalPoint((CameraUsefulParametersLeft.principalPointX + CameraUsefulParametersRight.principalPointX) / 2,
@@ -521,6 +614,58 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	// save these values to further calculus
 	averageFocalLength = focalLength;
 	averagePrincipalPoint = principalPoint;
+
+	// Ola Millnert method to find the best E is applied here
+	// from the Master Thesis titled
+	// Range determination for mobile robots using an omnidirectional camera  Feb 2006
+
+	// 1. sort the matches according their outlierness measure using the Hat Matrix
+
+	vector<sortMatch> sortedMatches;
+	SortMatchesUsingHatMatrix(sortedMatches);
+
+	// 2. Build the N-9 E matrices 
+
+	vector<cv::Mat> E_matrices;
+
+	vector<cv::Point2f> leftPoints, rightPoints, leftPointsNormalized, rightPointsNormalized;
+	KeyPoint::convert(matchesLeft, leftPoints);
+	KeyPoint::convert(matchesRight, rightPoints);
+
+	// get the best points
+	int NMatches = 9;
+	vector<cv::Point2f> leftNormalPoints, rightNormalPoints;
+	vector<cv::Point3f> leftNormalizedPoints, rightNormalizedPoints;
+
+	const int N_E_Matrices = sortedMatches.size() - NMatches;
+	int startPosition = 0 ;
+
+	for (int k = 0; k < N_E_Matrices; k++){
+
+		// select the next 9 correspondences
+		leftNormalizedPoints.clear();
+		rightNormalizedPoints.clear();
+
+		for (int i = 0; i < NMatches; i++){
+
+			leftNormalizedPoints.push_back(sortedMatches.at(i + startPosition).leftPoint);
+			rightNormalizedPoints.push_back(sortedMatches.at(i + startPosition).rightPoint);
+		}
+
+		// get E using normalized points xnorm= Kinv*x
+		convertPointsFromHomogeneous(leftNormalizedPoints, leftNormalPoints);
+		convertPointsFromHomogeneous(rightNormalizedPoints, rightNormalPoints);
+
+		cv::Mat E = findEssentialMat(leftNormalPoints, rightNormalPoints, focalLength, principalPoint, RANSAC, 0.99,3.0);
+		E_matrices.push_back(E);
+
+		// increase the start Position
+		startPosition = startPosition + 1;
+	}
+
+	// find the matrix E directly
+	/*convertPointsFromHomogeneous(leftNormalizedPoints, leftPoints);
+	convertPointsFromHomogeneous(rightNormalizedPoints, rightPoints);
 
 	cv::Mat E_openCV = findEssentialMat(leftPoints,rightPoints,focalLength,principalPoint,RANSAC,0.999);
 	E_openCV.copyTo(EsentialMatrix);
@@ -533,32 +678,183 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	printMatrix(w, string("w"));
 	printMatrix(w, string("u"));
-	printMatrix(w, string("vt"));
+	printMatrix(w, string("vt"));*/
 
-	// get E using normalized points xnorm= Kinv*x
-	vector<cv::Point2f> leftNormalPoints, rightNormalPoints;
-	vector<cv::Point3f> leftNormalizedPoints, rightNormalizedPoints;
-	normalizePoints(K_left, leftPoints, leftNormalizedPoints);
-	normalizePoints(K_right, rightPoints, rightNormalizedPoints);
+	// 3. Find the best E matrix
 
-	convertPointsFromHomogeneous(leftNormalizedPoints, leftNormalPoints);
-	convertPointsFromHomogeneous(rightNormalizedPoints, rightNormalPoints);
+	cv:Mat best_E;
+	Essential_MatrixData currentEssential_MatrixData;
+	vector<Essential_MatrixData> E_matricesData;
 
-	cv::Mat E_norm = findEssentialMat(leftNormalPoints, rightNormalPoints, focalLength, principalPoint, RANSAC, 0.999);
-	E_norm.copyTo(EsentialMatrix);
-	E_norm.copyTo(E_Matrix);
+	// set size of correspondences and parameters estimated for the E matrix
+	int N = sortedMatches.size();
+	int p = 8;
+
+	for (int k = 0; k < E_matrices.size();k++){
+
+		////////////////////////////////////////////////
+		// a. find the residuals for each E matrix found
+
+		cv::Mat pointsLeft(3,1,CV_64F);
+		cv::Mat pointsRight(3, 1, CV_64F);
+		cv::Mat tmpMatrix, residualsMat;
+		double residualsValue = 0;
+		vector<double> residuals;
+
+		for (int i = 0; i < sortedMatches.size(); i++){
+
+			pointsLeft.at<double>(0, 0) = sortedMatches.at(i).leftPoint.x;
+			pointsLeft.at<double>(1, 0) = sortedMatches.at(i).leftPoint.y;
+			pointsLeft.at<double>(2, 0) = sortedMatches.at(i).leftPoint.z;
+
+			pointsRight.at<double>(0, 0) = sortedMatches.at(i).rightPoint.x;
+			pointsRight.at<double>(1, 0) = sortedMatches.at(i).rightPoint.y;
+			pointsRight.at<double>(2, 0) = sortedMatches.at(i).rightPoint.z;
+
+			gemm(pointsRight, E_matrices.at(k), 1.0, cv::noArray(), 0.0, tmpMatrix, cv::GEMM_1_T);
+			gemm(tmpMatrix, pointsLeft,1.0,cv::noArray(),0.0,residualsMat);
+
+			// save the residuals for each correspondence
+			residualsValue = residualsMat.at<double>(0, 0);
+			residuals.push_back(residualsValue);
+		}
+		// save the residuals for each E matrix
+		currentEssential_MatrixData.matrixIndex = k;
+		currentEssential_MatrixData.residuals = residuals;
+
+		// save the current essential Matrix
+		E_matrices.at(k).copyTo(currentEssential_MatrixData.E_Matrix);		
+
+		/////////////////////////////////////////////////////
+		// b. check residuals that overcome a given threshold
+
+		vector<double> residualsSquare;
+		for (auto i : residuals){
+			residualsSquare.push_back(pow(i, 2));
+		}
+		
+		double medianValue;
+		getMedian(residualsSquare, medianValue);
+
+		// set the first threshold to filter correspondences greater that it
+		double thresholdReference = (2*p)/N;
+		double threshold_Ri = 2.5*(1.4826*(1 +(5/(N-p-1)))*sqrt(medianValue));
+		currentEssential_MatrixData.thresholdForResiduals = threshold_Ri;
+
+		bool isRiValid = false;
+		vector<bool> validRis;
+		// filter the residuals
+		for (int i = 0; i < residuals.size();i++){
+			if (std::abs(residuals.at(i)) < threshold_Ri){
+				isRiValid = true;
+				validRis.push_back(isRiValid);
+			}
+			else{
+				isRiValid = false;
+				validRis.push_back(isRiValid);
+			}
+		}
+
+		// save the validity status
+		currentEssential_MatrixData.validResiduals = validRis;
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////
+		// c.  find the variance for the E Matrix using the Residuals that overcome the threshold filter
+
+		vector<double> goodResiduals;
+		double sumValues = 0;
+		double currentValue;
+		for (int i = 0; i < residuals.size(); i++){
+			
+			if (validRis.at(i)){
+
+				currentValue = residuals.at(i);
+				goodResiduals.push_back(currentValue);
+				sumValues = sumValues + residuals.at(i);
+			}
+		}
+
+		// get the mean value for the good residuals
+		double goodResidualsMean = sumValues / goodResiduals.size();
+
+		// calculate the Vi variance of good residual for each E matrix
+		double varianceVi;
+		double summatoryValue = 0;
+
+		for (auto i : goodResiduals){
+			summatoryValue = summatoryValue + pow((i-goodResidualsMean), 2);
+		}
+
+		varianceVi = summatoryValue / (goodResiduals.size() -1);
+		currentEssential_MatrixData.EvarianceValidResiduals = varianceVi;
+
+		// save the data for this essential Matrix
+		E_matricesData.push_back(currentEssential_MatrixData);
+
+		// clear the residuals values on preparation for next E matrix
+		residuals.clear();
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+	// c. Find the median of the variances for all the E matrices
+	double medianOf_Ek_Variances;
+	vector<double> Ek_Variances;
+
+	for (auto i:E_matricesData){			
+		Ek_Variances.push_back(i.EvarianceValidResiduals);
+	}
+	getMedian(Ek_Variances, medianOf_Ek_Variances);
+
+	// Set a Second threshold to filter out the bad E matrices
+	double threshold_Vi = 2.5*(1.4826*(1 +(5/(N-p))))*medianOf_Ek_Variances;
+
+	vector<cv::Mat> good_EMatrices;
+	for (auto i:E_matricesData){
+
+		if (i.EvarianceValidResiduals < threshold_Vi){
+
+			good_EMatrices.push_back(i.E_Matrix);
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	// d. Choose the best E matrix sith lowest QE
+	double qE;
+	E_MatricesCandidates currentMatrixCandidate;
+	vector<E_MatricesCandidates> finalCandidates;
+	for (auto i:good_EMatrices){
+
+		// compute SVD(E_matrix) and solves for qE measure
+		cv::SVD::compute(i,w,u,vt);
+		qE = w.at<double>(0,0) - w.at<double>(1,0);
+		currentMatrixCandidate.qE = qE;
+		i.copyTo(currentMatrixCandidate.E_matrix);
+		finalCandidates.push_back(currentMatrixCandidate);		
+	}
+
+	// find the best E matrix according to qE
+	std::sort(finalCandidates.begin(), finalCandidates.end(),
+		[](const E_MatricesCandidates &a, const E_MatricesCandidates &b){
+		return a.qE < b.qE; });
+
+	// Finally get the best E Matrix
+	finalCandidates.front().E_matrix.copyTo(best_E);
+
+	// copy the best E matrix
+	best_E.copyTo(EsentialMatrix);
+	best_E.copyTo(E_Matrix);
 
 	string Enorm_Name("Essential Matrix using normalized points x_norm = Kinverted*x");
-	printMatrix(E_norm, Enorm_Name);
+	printMatrix(best_E, Enorm_Name);
 
-	cv::SVD::compute(E_norm, w, u, vt);
+	cv::SVD::compute(best_E, w, u, vt);
 
 	// check SVD values, 2 have to be equal and the last must be zero
 	printMatrix(w, string("w"));
 	//printMatrix(u, string("u"));
 	//printMatrix(vt, string("vt"));
 
-	cout << "Det(E)= " << cv::determinant(E_norm) << "\n" << endl;
+	cout << "Det(E)= " << cv::determinant(best_E) << "\n" << endl;
 
 }
 
