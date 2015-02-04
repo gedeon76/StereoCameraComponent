@@ -188,9 +188,21 @@ void CameraCalibration::getImagesAndFindPatterns(const string &cameraName)
 				blinkOutput = s.inputCapture.isOpened();
 			}
 
-			// Draw the corners.
+			// Draw the corners with ID
 			savedImage = view.clone();
 			drawChessboardCorners(view, s.boardSize, Mat(pointBuf), found);
+
+			// order the points according to d(x+y) from the upper left corner that is used as the origin frame
+			std::sort(pointBuf.begin(), pointBuf.end(), [](const cv::Point2f &a, const cv::Point2f &b)
+						{return ((a.x + a.y) < (b.x + b.y)); });
+
+			int pointCounter = 1;
+			for (auto i:pointBuf){
+						
+				cv::putText(view,std::to_string(pointCounter),cv::Point(i.x,i.y),cv::FONT_HERSHEY_PLAIN,1.0,cv::Scalar(255,0,0),1);
+				pointCounter = pointCounter + 1;
+			}
+
 			
 		}
 
