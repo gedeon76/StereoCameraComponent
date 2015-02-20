@@ -5,6 +5,7 @@ Results::Results()
 {
 	intrinsicCameraMatrix = Mat::eye(3,3,CV_64F);
 	distortionCoefficients = Mat::zeros(8, 1, CV_64F);
+	
 }
 
 
@@ -31,6 +32,7 @@ void Results::write(FileStorage& fs) const //Write serialization for this class
 
 		<< "Extrinsic_Parameters" << extrinsicParameters
 		<< "Image_points" << imagePoints
+		<< "Circle_Data" << circleData
 		<< "}";
 }
 
@@ -51,8 +53,12 @@ void Results::read(const FileNode& node)	//Read serialization for this class
 	node["Avg_Reprojection_Error"] >> avgReprojectionError;
 	node["Per_View_Reprojection_Errors"] >> perViewReprojectionErrors;
 
-	node["Extrinsic_Parameters"] >> extrinsicParameters;
+	node["Extrinsic_Parameters"] >> extrinsicParameters;	
 	node["Image_points"] >> imagePoints;
+
+	node["Circle_Data"] >> circleData;
+
+	
 }
 
 void Results::interpretate()

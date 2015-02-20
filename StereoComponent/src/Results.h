@@ -15,6 +15,22 @@
 using namespace cv;
 using namespace std;
 
+/// this structure save the points found for the asymetric circle pattern
+struct circlePatternInfo
+{
+	int circleID;
+	cv::Point2f circlePosition;
+	cv::Point3f circle3DPosition;
+};
+
+/// This structure save all the circles found per each calibration image
+struct circlesDataPerImage
+{
+	int cameraID;
+	int imageID;
+	std::vector<circlePatternInfo> circlesData;
+};
+
 class Results
 {
 public:
@@ -32,7 +48,8 @@ public:
 	Mat perViewReprojectionErrors;		///< error reprojection error per image
 	Mat extrinsicParameters;			///< rotation and traslation for each used image in the calibration
 	Mat imagePoints;					///< image points used for the calibration in all images
-
+	Mat circleData;						///< It contains all the data from the asymetrical circles pattern
+	
 public:
 	Results();
 	~Results();
@@ -42,7 +59,7 @@ public:
 	void write(FileStorage& fs) const;
 	
 	/// read the results xml file
-	/// @param[in] node It contains the readings from the configuration file 
+	/// @param[in] node It contains the readings from the results file 
 	void read(const FileNode& node);
 
 	/// interpretate the different values from the xml results file

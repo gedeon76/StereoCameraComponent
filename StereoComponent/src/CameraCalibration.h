@@ -77,11 +77,18 @@ public:
 	// get the images used for the calibration process
 	void getImagesUsedForCalibration(vector<capturedFrame> &imageList);
 
+	// get the information about circle patterns used to calibration
+	// here these points will be used for scale factor estimation
+	void getInfoFromCirclePatterns(vector<circlesDataPerImage> &circlesPatternData);
+
 	// get the number of images used for calibration
 	int getHowManyImagesWereUsedperCamera();
 
 	// get file path
 	bool getPathForThisFile(string &Filename, string &pathFound);
+
+	// get the file path of the calibration results
+	//bool getPathForResults(string &resultsPath);
 
 	// get camera ID
 	void getCameraID(int &cameraID);
@@ -92,7 +99,12 @@ private:
 	Settings s;
 	Results calibrationResults;
 	string  inputSettingsFile;
+	vector<cv::Point2f> circlePoints;
 	vector<vector<Point2f> > imagePoints;
+	vector<cv::Point3f> circle_Mis_Positions;
+	vector<circlePatternInfo> circlePatterns3D_Data;
+	vector<circlesDataPerImage> DataFromCirclesPattern;
+	Mat patternInformation;
 	Mat cameraMatrix, distCoeffs;
 	Mat intrinsicK_Matrix, distortionCoefficients;
 	Mat savedImage;

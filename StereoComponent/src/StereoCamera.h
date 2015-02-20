@@ -1,5 +1,5 @@
 
-
+#pragma once
 
 #ifndef _CAMERA_CALIBRATION_H_
 	#include "CameraCalibration.h"
@@ -33,6 +33,7 @@ public:
 
 	double getFundamentalMatrix(cv::Mat &FundamentalMatrix);
 	double getEsentialMatrix(cv::Mat &EsentialMatrix);	
+	void getScaleFactor(double &ScaleFactor);
 	bool getPathForThisFile(string &Filename, string &pathFound);
 	void testCalibrationProcess();
 
@@ -49,12 +50,15 @@ private:
 	cameraData CameraUsefulParametersRight;
 	vector<cv::Mat> leftCalibrationImageList;
 	vector<cv::Mat> rightCalibrationImageList;
+	vector<circlesDataPerImage> leftPatternCalibrationData;
+	vector<circlesDataPerImage> rightPatternCalibrationData;
 	vector<KeyPoint> matchesLeft, matchesRight;
 	vector<DMatch> good_matches;
 	cv::Mat imageMatches;
 	cv::Mat F_Matrix,E_Matrix;
 	cv::Mat PLeft, PRight;
 	cv::Mat KLeft, KRight;
+	double scaleFactorValue;
 	int cameraGlobalStatus;	
 	float averageFocalLength;
 	cv::Point2d averagePrincipalPoint;
@@ -69,6 +73,9 @@ private:
 
 	/// Read the intrinsic parameters for the left and right cameras
 	void readIntrinsicParameters(vector<cv::Mat> &intrinsicParameters);
+
+	/// Read the data from asymetrical circles Patterns
+	void readAssymetricalCirclesData();
 
 	/// Read some useful camera parameters for the left and right cameras
 	void readCameraUsefulParameters(cameraParameters &camerausefulParameters);
@@ -111,6 +118,11 @@ private:
 
 	/// Build a proection Matrix
 	void build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T);
+
+	/// Estimate Scale factor for triangulation
+	/// According to Lourakis'13 paper
+	/// Accurate Scale Factor Estimation in 3D Reconstruction
+	void estimateScaleFactor(double &ScaleFactor);
 
 	/// Test if this 3D point is correct, all values must be positive 
 	bool test3DPoint(vector<cv::Point3f> pointsToTest);

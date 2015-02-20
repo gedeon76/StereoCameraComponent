@@ -93,6 +93,16 @@ double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 	return Error;
 }
 
+// get the scale factor for triangulation
+void StereoCamera::getScaleFactor(double &ScaleFactor){
+
+	readAssymetricalCirclesData();
+	estimateScaleFactor(ScaleFactor);
+
+	// save estimated scale factor
+	scaleFactorValue = ScaleFactor;
+}
+
 // get the path to a given file
 bool StereoCamera::getPathForThisFile(string &fileName, string &pathFound)
 {
@@ -168,10 +178,25 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	leftCamera.readResults(leftResultsFile);
 	rightCamera.readResults(rightResultsFile);
 
-	// save the image used for calibration
-	//leftCamera.getImagesUsedForCalibration(leftCalibrationImageList);
-	//rightCamera.getImagesUsedForCalibration(rightCalibrationImageList);
+	FileStorage fs;
+	fs.open(leftResultsFile, FileStorage::READ);
 
+	if (fs.isOpened())
+	{
+		cout << "File is opened\n";
+	}
+
+	FileNode n = fs.root();
+	for (FileNodeIterator current = n.begin(); current != n.end(); current++) {
+		FileNode item = *current;
+		Mat v;
+		item["Circle_Data"] >> v;
+		cout << v << endl;
+	}
+
+	fs.release();
+
+	
 }
 
 
@@ -187,6 +212,14 @@ void StereoCamera::readIntrinsicParameters(vector<cv::Mat> &intrinsicParameters)
 	intrinsicParameters.push_back(K_left);
 	intrinsicParameters.push_back(K_right);
 	
+}
+
+// read Assymetrical circles Patterns from the two images
+void StereoCamera::readAssymetricalCirclesData(){
+
+	leftCamera.getInfoFromCirclePatterns(leftPatternCalibrationData);
+	rightCamera.getInfoFromCirclePatterns(rightPatternCalibrationData);
+
 }
 
 // read some useful parameters from the calibration results
@@ -511,9 +544,9 @@ void StereoCamera::findFundamentalMatrix(cv::Mat &F_MatrixExtern) {
 	computeCorrespondEpilines(rightPoints, 2, F_Matrix, leftEpipolarLines);
 
 	int linesNumber = leftPoints.size();
-	float aL, bL, cL, aR, bR, cR;
-	float x1L, y1L, x2L, y2L;
-	float x1R, y1R, x2R, y2R;
+	double aL, bL, cL, aR, bR, cR;
+	double x1L, y1L, x2L, y2L;
+	double x1R, y1R, x2R, y2R;
 	cv::Point point1L, point2L, point1R, point2R;
 	for (int i = 0; i < linesNumber; i++){
 
@@ -682,7 +715,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 
 	// 3. Find the best E matrix
 
-	cv:Mat best_E;
+	cv::Mat best_E;
 	Essential_MatrixData currentEssential_MatrixData;
 	vector<Essential_MatrixData> E_matricesData;
 
@@ -818,7 +851,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	// d. Choose the best E matrix sith lowest QE
+	// d. Choose the best E matrix with lowest QE
 	double qE;
 	E_MatricesCandidates currentMatrixCandidate;
 	vector<E_MatricesCandidates> finalCandidates;
@@ -997,6 +1030,134 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 	cv::convertPointsFromHomogeneous(triangulatedPointsRecovered.reshape(4, 1), testTriangulatedPoints);
 
 	
+}
+
+// Estimate the Scale Factor for 3D triangulation
+void StereoCamera::estimateScaleFactor(double &ScaleFactor){
+
+	// ABSOLUTE ROTATION METHOD From Lourakis'13 article titled:
+	// Accurate Scale Factor Estimation in 3D reconstruction
+
+	// get the K matrices
+	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+
+	// build the Mi positions for each circle from the calibration Patterns
+	vector<circlesDataPerImage> Mi_Left,Mi_Right;
+	
+	Mi_Left = leftPatternCalibrationData;
+	Mi_Right = rightPatternCalibrationData;
+
+	// build the Ni positions for each circle from the left and right image pair
+	
+	// start with the image pair No 5
+	vector<cv::Point2f> inputLeft, inputRight;
+	vector<cv::Point3f> Mis_3D;
+	vector<circlePatternInfo> leftPattern, rightPattern;
+
+	leftPattern = Mi_Left.at(4).circlesData;
+	rightPattern = Mi_Right.at(4).circlesData;
+
+	// get the circles positions in (x,y) and in 3D
+	for (int i = 0; i < leftPattern.size();i++){
+
+		inputLeft.push_back(leftPattern.at(i).circlePosition);
+		inputRight.push_back(rightPattern.at(i).circlePosition);
+		Mis_3D.push_back(leftPattern.at(i).circle3DPosition);
+	}
+
+	// take the found Projection matrices P,P' and triangulate the circles points
+	cv::Mat triangulateCirclesPatternPoint_3D;
+	vector<cv::Point2f> leftTestPoint, rightTestPoint;
+	vector<cv::Point3f> leftNormalizedPoint, rightNormalizedPoint;
+
+	normalizePoints(KLeft, inputLeft, leftNormalizedPoint);
+	normalizePoints(KRight, inputRight, rightNormalizedPoint);
+
+	convertPointsFromHomogeneous(leftNormalizedPoint, leftTestPoint);
+	convertPointsFromHomogeneous(rightNormalizedPoint, rightTestPoint);
+
+	
+	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateCirclesPatternPoint_3D);
+
+	// converts from homogeneous to obtain the Nis Points 
+	vector<cv::Point3f> Nis_3D;
+	cv::convertPointsFromHomogeneous(triangulateCirclesPatternPoint_3D.reshape(4, 1),Nis_3D);
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 3. Obtain the centroids for the Mi's and Ni's Positions
+	cv::Scalar M_mean = cv::mean(Mis_3D, cv::noArray());
+	cv::Scalar N_mean = cv::mean(Nis_3D, cv::noArray());
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 4. Get the relative positions
+	cv::Point3f M_mean3D, N_mean3D;
+	M_mean3D.x = M_mean.val[0];
+	M_mean3D.y = M_mean.val[1];
+	M_mean3D.z = M_mean.val[2];
+
+	N_mean3D.x = N_mean.val[0];
+	N_mean3D.y = N_mean.val[1];
+	N_mean3D.z = N_mean.val[2];
+
+	vector<cv::Point3f> Mis_3Drelative, Nis_3Drelative;
+	for (int i = 0; i < Mis_3D.size();i++){
+
+		Mis_3Drelative.push_back(Mis_3D.at(i) - M_mean3D);
+		Nis_3Drelative.push_back(Nis_3D.at(i) - N_mean3D);
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 5. Build the cross covariance matrix and get the Scale factor
+	cv::Mat CrossCovarianceMatrix = cv::Mat::zeros(3, 3, CV_64F);
+	cv::Mat CrossCovTemp = cv::Mat::zeros(3,3,CV_64F);
+	double norm_Mi = 0;
+	double norm_Ni = 0;
+		
+	for (int i = 0; i < Mis_3Drelative.size();i++){
+
+		cv::Mat Mi_R(Mis_3Drelative.at(i));
+		cv::Mat Ni_R(Nis_3Drelative.at(i));
+		gemm(Ni_R, Mi_R, 1.0, cv::noArray(), 0.0, CrossCovTemp, cv::GEMM_2_T);
+		CrossCovarianceMatrix = CrossCovarianceMatrix + CrossCovTemp;
+
+		// get relative points L2 norm
+		norm_Mi = norm_Mi + cv::norm(Mis_3Drelative.at(i));
+		norm_Ni = norm_Ni + cv::norm(Mis_3Drelative.at(i));
+	}
+	
+	// print covariance Matrix
+	cout << "Cross Covariance Matrix \n" << CrossCovarianceMatrix << endl;
+
+	cv::Mat u, w, vt;
+	cv::SVD::compute(CrossCovarianceMatrix,w,u,vt);
+
+	cv::Mat R,t;
+	double lambda;
+
+	// Find R between point reference frames
+	gemm(vt,u,1.0,cv::noArray(),0.0,R,cv::GEMM_1_T + cv::GEMM_2_T);
+
+	// print R matrix
+	cout << "Rotation Matrix \n" << R << endl;
+
+	// get the scale factor
+	lambda = sqrt(norm_Mi / norm_Ni);
+
+	// get the traslation between point reference frames
+	cv::Mat partial_t;
+	cv::Mat N_meanTmp(N_mean3D);
+	cv::Mat M_meanTmp(M_mean3D);
+
+	// t = N_mean - lambda*R*M_mean;
+	gemm(R, M_meanTmp, lambda, cv::noArray(), 0.0,partial_t);
+	t = N_mean - partial_t;
+
+	// print traslation t
+	cout << "traslation t between Mi and Ni points \n" << t << endl;
+
+	// return Scale factor
+	ScaleFactor = lambda;
 }
 
 
@@ -1280,7 +1441,7 @@ void StereoCamera::evaluateResults(void){
 	gemm(KRight,PRight,1.0,cv::noArray(),0.0, P_realRight);
 
 	// scaling factor
-	double lambda = 1.0;
+	double lambda = scaleFactorValue;
 
 	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateTrackedPoint_3D);
 
