@@ -88,7 +88,7 @@ public:
 	bool getPathForThisFile(string &Filename, string &pathFound);
 
 	// get the file path of the calibration results
-	//bool getPathForResults(string &resultsPath);
+	void getPathForResults(string &pathToResults);
 
 	// get camera ID
 	void getCameraID(int &cameraID);

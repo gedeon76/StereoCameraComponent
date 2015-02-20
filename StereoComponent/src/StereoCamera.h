@@ -86,6 +86,9 @@ private:
 	/// Get a path for a given file
 	bool getFilePath(string &fileName, string &pathFound);
 
+	/// Get the filepath given a path for a filename
+	bool getFileGivenPath(string &fileName, string &givenPath, string &pathFound);
+
 	/// Read the images used for camera calibration
 	void getImageUsedFromCalibration(vector<cv::Mat> &leftImageList, vector<cv::Mat> &rightImageList);
 

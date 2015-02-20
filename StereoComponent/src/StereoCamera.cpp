@@ -167,8 +167,12 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 	string myPath;
 	string FileName("Calibration_Results_Left_Camera.xml");	
 
+	// get the path to the results file
+	boost::filesystem::path currentPath = boost::filesystem::current_path();
+	string resultsPath = currentPath.generic_string();
+	
 	boost::filesystem::path p{"/"};
-	getPathForThisFile(FileName, myPath);
+	getFileGivenPath(FileName,resultsPath,myPath);
 	pathToSetupFiles = boost::filesystem::path(myPath);
 	parentPath = pathToSetupFiles.parent_path();
 		
@@ -177,24 +181,6 @@ void StereoCamera::calibrateCameras(string &leftSettingsFile, string &rightSetti
 
 	leftCamera.readResults(leftResultsFile);
 	rightCamera.readResults(rightResultsFile);
-
-	FileStorage fs;
-	fs.open(leftResultsFile, FileStorage::READ);
-
-	if (fs.isOpened())
-	{
-		cout << "File is opened\n";
-	}
-
-	FileNode n = fs.root();
-	for (FileNodeIterator current = n.begin(); current != n.end(); current++) {
-		FileNode item = *current;
-		Mat v;
-		item["Circle_Data"] >> v;
-		cout << v << endl;
-	}
-
-	fs.release();
 
 	
 }
@@ -263,6 +249,50 @@ bool StereoCamera::getFilePath(string &fileName,string &pathFound)
 
 	// built the directory for search 2 levels up
 	int levelUp = 2;
+	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
+	for (int i = 0; i < (pathElementsSize - levelUp); i++){
+		directory /= *itToBuildPath;
+		++itToBuildPath;
+	}
+
+	boost::filesystem::path& path = directory;
+	const boost::filesystem::path file = fileName;
+	const boost::filesystem::recursive_directory_iterator end;
+	const boost::filesystem::recursive_directory_iterator dir_iter(directory);
+
+	const auto it = std::find_if(dir_iter,
+		end,
+		[&file](const boost::filesystem::directory_entry& e)
+	{
+		return e.path().filename() == file;
+	});
+
+	if (it != end){
+
+		path = it->path();
+		pathFound = path.generic_string();		// make the path portable
+		found = true;
+	}
+	return found;
+}
+
+// search for a given file given a path
+bool StereoCamera::getFileGivenPath(string &fileName, string &givenPath, string &pathFound)
+{
+	bool found = false;
+
+	// look for current path
+	boost::filesystem::path directory;
+	boost::filesystem::path currentPath(givenPath);
+
+	// get the number of elements of the path
+	int pathElementsSize = 0;
+	for (boost::filesystem::path::iterator it = currentPath.begin(); it != currentPath.end(); ++it){
+		pathElementsSize = pathElementsSize + 1;
+	}
+
+	// built the directory for search 0 levels up
+	int levelUp = 0;
 	boost::filesystem::path::iterator itToBuildPath = currentPath.begin();
 	for (int i = 0; i < (pathElementsSize - levelUp); i++){
 		directory /= *itToBuildPath;
@@ -1039,8 +1069,8 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 	// Accurate Scale Factor Estimation in 3D reconstruction
 
 	// get the K matrices
-	cv::Mat K_left = Mat::eye(3, 3, CV_64F);
-	cv::Mat K_right = Mat::eye(3, 3, CV_64F);
+	//cv::Mat K_left = Mat::eye(3, 3, CV_64F);
+	//cv::Mat K_right = Mat::eye(3, 3, CV_64F);	
 
 	// build the Mi positions for each circle from the calibration Patterns
 	vector<circlesDataPerImage> Mi_Left,Mi_Right;
@@ -1076,7 +1106,6 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 
 	convertPointsFromHomogeneous(leftNormalizedPoint, leftTestPoint);
 	convertPointsFromHomogeneous(rightNormalizedPoint, rightTestPoint);
-
 	
 	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateCirclesPatternPoint_3D);
 
@@ -1109,8 +1138,8 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 5. Build the cross covariance matrix and get the Scale factor
-	cv::Mat CrossCovarianceMatrix = cv::Mat::zeros(3, 3, CV_64F);
-	cv::Mat CrossCovTemp = cv::Mat::zeros(3,3,CV_64F);
+	cv::Mat CrossCovarianceMatrix = cv::Mat::zeros(3,3,CV_32F);
+	cv::Mat CrossCovTemp(3, 3, CV_32F);
 	double norm_Mi = 0;
 	double norm_Ni = 0;
 		
@@ -1119,11 +1148,15 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 		cv::Mat Mi_R(Mis_3Drelative.at(i));
 		cv::Mat Ni_R(Nis_3Drelative.at(i));
 		gemm(Ni_R, Mi_R, 1.0, cv::noArray(), 0.0, CrossCovTemp, cv::GEMM_2_T);
-		CrossCovarianceMatrix = CrossCovarianceMatrix + CrossCovTemp;
+
+		if (CrossCovarianceMatrix.type() != CrossCovTemp.type()){
+			CrossCovarianceMatrix.convertTo(CrossCovarianceMatrix, CrossCovTemp.type());
+		}
+		cv::add(CrossCovarianceMatrix,CrossCovTemp,CrossCovarianceMatrix,cv::noArray());
 
 		// get relative points L2 norm
 		norm_Mi = norm_Mi + cv::norm(Mis_3Drelative.at(i));
-		norm_Ni = norm_Ni + cv::norm(Mis_3Drelative.at(i));
+		norm_Ni = norm_Ni + cv::norm(Nis_3Drelative.at(i));
 	}
 	
 	// print covariance Matrix

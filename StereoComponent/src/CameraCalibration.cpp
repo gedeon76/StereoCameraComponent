@@ -596,7 +596,6 @@ void CameraCalibration::getInfoFromCirclePatterns(vector<circlesDataPerImage> &c
 	Mat tmpCircleMat = calibrationResults.circleData.clone();
 	tmpCircleMat.copyTo(patternInformation);
 
-	Mat currentCircleData;
 	circlePatternInfo  oneCircle;
 	std::vector<circlePatternInfo> currentCircles;
 	circlesDataPerImage currentImageCirclePatterns;
@@ -604,28 +603,38 @@ void CameraCalibration::getInfoFromCirclePatterns(vector<circlesDataPerImage> &c
 	int imageID = 0;
 	int idx = 0;
 
-	int dataPerImageSize = tmpCircleMat.rows / patternCircleNumber + 1;
+	int dataPerImageSize = patternInformation.rows / (patternCircleNumber + 1);
+	int increase = patternCircleNumber + 1;
 
-	for (int k = 0; k < tmpCircleMat.rows; k + patternCircleNumber + 1){
+	for (int k = 0; k < dataPerImageSize; k++){
 
-		cameraID = tmpCircleMat.at<double>(k,0);
-		imageID = tmpCircleMat.at<double>(k,1);
-		
+		int positionIndex = k*increase;
+		if (k == 0){
+			cameraID = patternInformation.at<double>(k, 0);
+			imageID = patternInformation.at<double>(k, 1);
+		}
+		else{
+			cameraID = patternInformation.at<double>(positionIndex, 0);
+			imageID = patternInformation.at<double>(positionIndex, 1);
+		}
+
 		// Get the data from the 1x6x44 vector matrix
-		for (int i = 0; i < dataPerImageSize; i++){
-
-			oneCircle.circleID = currentCircleData.at<double>(k+i, 0);
-			oneCircle.circlePosition.x = currentCircleData.at<double>(k + i, 1);
-			oneCircle.circlePosition.y = currentCircleData.at<double>(k + i, 2);
-			oneCircle.circle3DPosition.x = currentCircleData.at<double>(k + i, 3);
-			oneCircle.circle3DPosition.y = currentCircleData.at<double>(k + i, 4);
-			oneCircle.circle3DPosition.z = currentCircleData.at<double>(k + i, 5);
+		for (int i = 0; i < patternCircleNumber; i++){
+			
+			int shift = positionIndex + 1;
+			oneCircle.circleID = patternInformation.at<double>(shift + i, 0);
+			oneCircle.circlePosition.x = patternInformation.at<double>(shift + i, 1);
+			oneCircle.circlePosition.y = patternInformation.at<double>(shift + i, 2);
+			oneCircle.circle3DPosition.x = patternInformation.at<double>(shift + i, 3);
+			oneCircle.circle3DPosition.y = patternInformation.at<double>(shift + i, 4);
+			oneCircle.circle3DPosition.z = patternInformation.at<double>(shift + i, 5);
 			currentCircles.push_back(oneCircle);
 		}
 
 		currentImageCirclePatterns.cameraID = cameraID;
 		currentImageCirclePatterns.imageID = imageID;
 		currentImageCirclePatterns.circlesData = currentCircles;
+		currentCircles.clear();
 
 		// save the data to the specific vector
 		DataFromCirclesPattern.push_back(currentImageCirclePatterns);
@@ -684,6 +693,12 @@ bool CameraCalibration::getPathForThisFile(string &fileName, string &pathFound)
 		found = true;
 	}
 	return found;
+}
+
+void CameraCalibration::getPathForResults(string &pathToResults){
+
+	// recover the path being used to save the xml results file
+	pathToResults = resultsPath.generic_string();
 }
 
 void CameraCalibration::getCameraID(int &cameraID){
