@@ -683,10 +683,29 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	// Range determination for mobile robots using an omnidirectional camera  Feb 2006
 
 	// 1. sort the matches according their outlierness measure using the Hat Matrix
+	//	Hat Matrix is a method for outliers diagnosis in measurements
 
-	vector<sortMatch> sortedMatches;
+	vector<sortMatch> sortedMatches, sortedMatchesWithOutliers;
 	SortMatchesUsingHatMatrix(sortedMatches);
 
+	// Reject the outliers whose values are greater that hii > 2p/N, hii is the diagonals of Hat Matrix
+	// See Dagmar Blatna 
+
+
+	// set size of correspondences and parameters estimated for the E matrix
+	int N = sortedMatches.size();
+	int p = 8;								// 8 parameters for E calculus
+
+	double ThresholdOutliers = 2*static_cast<double>(p)/N;
+	
+	for (auto i :sortedMatchesWithOutliers){
+
+		double hii = i.outliernessMeasure;
+		if (hii < ThresholdOutliers){
+			sortedMatches.push_back(i);
+		}
+	}
+	
 	// 2. Build the N-9 E matrices 
 
 	vector<cv::Mat> E_matrices;
@@ -749,10 +768,6 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	Essential_MatrixData currentEssential_MatrixData;
 	vector<Essential_MatrixData> E_matricesData;
 
-	// set size of correspondences and parameters estimated for the E matrix
-	int N = sortedMatches.size();
-	int p = 8;
-
 	for (int k = 0; k < E_matrices.size();k++){
 
 		////////////////////////////////////////////////
@@ -800,8 +815,7 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 		getMedian(residualsSquare, medianValue);
 
 		// set the first threshold to filter correspondences greater that it
-		double thresholdReference = (2*p)/N;
-		double threshold_Ri = 2.5*(1.4826*(1 +(5/(N-p-1)))*sqrt(medianValue));
+		double threshold_Ri = 2.5*(1.4826*(1 + (5 / (N - p - 1)))*sqrt(medianValue));
 		currentEssential_MatrixData.thresholdForResiduals = threshold_Ri;
 
 		bool isRiValid = false;
