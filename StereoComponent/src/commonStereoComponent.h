@@ -18,7 +18,7 @@ const float match_ratio = 0.5f;		 // Nearest neighbor matching ratio
 
 /// constant for scale factor estimation
 const int patternCircleNumber = 44;
-const float A_dist = 3.5;			//  3.5 cm is the real separation between circles
+const float A_dist = 35;			//  35 mm is the real separation between circles
 									//	for the OpenCV asymetric circles pattern with 44 circles
 
 /// These points are used to build the Mi's according to

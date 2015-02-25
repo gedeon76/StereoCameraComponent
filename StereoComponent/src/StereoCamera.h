@@ -58,6 +58,7 @@ private:
 	cv::Mat F_Matrix,E_Matrix;
 	cv::Mat PLeft, PRight;
 	cv::Mat KLeft, KRight;
+	cv::Mat extrinsicParameters;
 	double scaleFactorValue;
 	int cameraGlobalStatus;	
 	float averageFocalLength;

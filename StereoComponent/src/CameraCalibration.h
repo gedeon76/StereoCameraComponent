@@ -69,6 +69,9 @@ public:
 	// get the intrinsic calibration matrix found for this camera
 	void getIntrinsicMatrix(Mat &intrinsicMatrix);
 
+	// get the extrinsic parameters Rx,Ry,Rz, Tx,Ty, Tz for each image
+	void getExtrinsicParameters(Mat &extrinsicParameters);
+
 	void getCameraUsefulParameters(cameraData &cameraUsefulParameters);
 
 	// get the distortion parameters found for this camera
@@ -107,6 +110,7 @@ private:
 	Mat patternInformation;
 	Mat cameraMatrix, distCoeffs;
 	Mat intrinsicK_Matrix, distortionCoefficients;
+	Mat extrinsicParametersMatrix;
 	Mat savedImage;
 	Size imageSize;
 	int mode;

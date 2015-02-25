@@ -547,6 +547,13 @@ void CameraCalibration::getIntrinsicMatrix(Mat &intrinsicMatrix)
 
 }
 
+void CameraCalibration::getExtrinsicParameters(Mat &extrincicParameters){
+
+	extrinsicParametersMatrix = calibrationResults.extrinsicParameters.clone();
+	extrinsicParametersMatrix.copyTo(extrincicParameters);
+
+}
+
 void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParameters)
 {
 	Size imageSize;

@@ -482,7 +482,7 @@ void StereoCamera::SortMatchesUsingHatMatrix(vector<sortMatch> &sortedMatches){
 
 	// sort the matches using a lambda function 
 	// the sort value is the diagonal of the Hat Matrix
-	// low values are better matches, larges ones are taken as outliers
+	// low values are better matches, large ones are taken as outliers
 	std::sort(outliernessValues.begin(), outliernessValues.end(), 
 		[](const sortMatch &a, const sortMatch &b){
 		return b.outliernessMeasure > a.outliernessMeasure; });
@@ -686,14 +686,14 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 	//	Hat Matrix is a method for outliers diagnosis in measurements
 
 	vector<sortMatch> sortedMatches, sortedMatchesWithOutliers;
-	SortMatchesUsingHatMatrix(sortedMatches);
+	SortMatchesUsingHatMatrix(sortedMatchesWithOutliers);
 
 	// Reject the outliers whose values are greater that hii > 2p/N, hii is the diagonals of Hat Matrix
 	// See Dagmar Blatna 
 
 
 	// set size of correspondences and parameters estimated for the E matrix
-	int N = sortedMatches.size();
+	int N = sortedMatchesWithOutliers.size();
 	int p = 8;								// 8 parameters for E calculus
 
 	double ThresholdOutliers = 2*static_cast<double>(p)/N;
@@ -1086,29 +1086,108 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 	//cv::Mat K_left = Mat::eye(3, 3, CV_64F);
 	//cv::Mat K_right = Mat::eye(3, 3, CV_64F);	
 
-	// build the Mi positions for each circle from the calibration Patterns
+	///////////////////////////////////////////////////////////////////////////
+	// 1. build the Mi positions for each circle from the calibration Patterns
 	vector<circlesDataPerImage> Mi_Left,Mi_Right;
-	
+	cv::Mat extrinsicsLeftCamera, extrinsicsRightCamera;
+		
 	Mi_Left = leftPatternCalibrationData;
 	Mi_Right = rightPatternCalibrationData;
 
-	// build the Ni positions for each circle from the left and right image pair
+	leftCamera.getExtrinsicParameters(extrinsicsLeftCamera);
+	rightCamera.getExtrinsicParameters(extrinsicsRightCamera);	
 	
 	// start with the image pair No 5
 	vector<cv::Point2f> inputLeft, inputRight;
 	vector<cv::Point3f> Mis_3D;
 	vector<circlePatternInfo> leftPattern, rightPattern;
-
+	cv::Point3f rvec1, tvec1, Mi_Rotation, Mi_Position, Mi_PositionHom;
+	cv::Mat Mis_3D_Homogeneous;
+	// get data for this image
 	leftPattern = Mi_Left.at(4).circlesData;
-	rightPattern = Mi_Right.at(4).circlesData;
+	rightPattern = Mi_Right.at(4).circlesData;	
 
+	if (!extrinsicsLeftCamera.empty()){
+	
+		// rotation vector
+		rvec1.x = extrinsicsLeftCamera.at<double>(4, 0);
+		rvec1.y = extrinsicsLeftCamera.at<double>(4, 1);
+		rvec1.z = extrinsicsLeftCamera.at<double>(4, 2);
+	
+		// traslation vector
+		tvec1.x = extrinsicsLeftCamera.at<double>(4, 3);
+		tvec1.y = extrinsicsLeftCamera.at<double>(4, 4);
+		tvec1.z = extrinsicsLeftCamera.at<double>(4, 5);
+	}
+
+	// Build Homogeneous Transform between Camera and calibration pattern 
+	cv::Mat R_pattern(rvec1); 
+	cv::Mat T_pattern(tvec1);
+	cv::Mat R_transform;
+	
+	cv::Rodrigues(R_pattern, R_transform,cv::noArray());
+	cv::Mat Transform_Cam_TO_Pattern = cv::Mat::zeros(4, 4, R_transform.type());
+	
+	// set Rotation
+	Transform_Cam_TO_Pattern.at<float>(0, 0) = R_transform.at<float>(0, 0);
+	Transform_Cam_TO_Pattern.at<float>(0, 1) = R_transform.at<float>(0, 1);
+	Transform_Cam_TO_Pattern.at<float>(0, 2) = R_transform.at<float>(0, 2);
+
+	Transform_Cam_TO_Pattern.at<float>(1, 0) = R_transform.at<float>(1, 0);
+	Transform_Cam_TO_Pattern.at<float>(1, 1) = R_transform.at<float>(1, 1);
+	Transform_Cam_TO_Pattern.at<float>(1, 2) = R_transform.at<float>(1, 2);
+
+	Transform_Cam_TO_Pattern.at<float>(2, 0) = R_transform.at<float>(2, 0);
+	Transform_Cam_TO_Pattern.at<float>(2, 1) = R_transform.at<float>(2, 1);
+	Transform_Cam_TO_Pattern.at<float>(2, 2) = R_transform.at<float>(2, 2);
+
+	// set traslation
+	Transform_Cam_TO_Pattern.at<float>(0, 3) = T_pattern.at<float>(0, 0);
+	Transform_Cam_TO_Pattern.at<float>(1, 3) = T_pattern.at<float>(1, 0);
+	Transform_Cam_TO_Pattern.at<float>(2, 3) = T_pattern.at<float>(2, 0);
+
+	Transform_Cam_TO_Pattern.at<float>(3, 3) = 1;
+
+	
 	// get the circles positions in (x,y) and in 3D
+	vector<cv::Point3f> Mis_3D_tmp;
 	for (int i = 0; i < leftPattern.size();i++){
 
 		inputLeft.push_back(leftPattern.at(i).circlePosition);
 		inputRight.push_back(rightPattern.at(i).circlePosition);
-		Mis_3D.push_back(leftPattern.at(i).circle3DPosition);
+		
+		// Get traslation for each Mi point from the pattern reference 
+		// frame, it is set to the upper left circle
+		Mi_Position.x = leftPattern.at(i).circle3DPosition.x;
+		Mi_Position.y = leftPattern.at(i).circle3DPosition.y;
+		Mi_Position.z = leftPattern.at(i).circle3DPosition.z;		
+	
+		Mis_3D_tmp.push_back(Mi_Position);
 	}
+
+	// find the real Mi position
+	cv::Mat Mis_3D_realPosition;
+	cv::Mat current_Mi(4,1,Transform_Cam_TO_Pattern.type());
+	
+	for (int i = 0; i < Mis_3D_tmp.size();i++){
+
+		// read homogeneous position
+		current_Mi.at<float>(0, 0) = Mis_3D_tmp.at(i).x;
+		current_Mi.at<float>(1, 0) = Mis_3D_tmp.at(i).y;
+		current_Mi.at<float>(2, 0) = Mis_3D_tmp.at(i).z;
+		current_Mi.at<float>(3, 0) = 1;
+
+		gemm(Transform_Cam_TO_Pattern, current_Mi, 1.0, cv::noArray(), 0.0, Mis_3D_realPosition);
+		Mi_PositionHom.x = Mis_3D_realPosition.at<float>(0, 0);
+		Mi_PositionHom.y = Mis_3D_realPosition.at<float>(1, 0);
+		Mi_PositionHom.z = Mis_3D_realPosition.at<float>(2, 0);
+
+		Mis_3D.push_back(Mi_PositionHom);
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////////
+	// 2. build the Ni positions for each circle from the left and right image pair
 
 	// take the found Projection matrices P,P' and triangulate the circles points
 	cv::Mat triangulateCirclesPatternPoint_3D;
