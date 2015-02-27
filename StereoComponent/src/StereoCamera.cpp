@@ -1547,10 +1547,20 @@ void StereoCamera::evaluateResults(void){
 	
 	vector<cv::Point3f> inputLeft, inputRight;
 
+	// scaling factor
+	double lambda = scaleFactorValue;
+
 	// take the found Projection matrices P,P' and triangulate the current point
 	cv::Mat triangulateTrackedPoint_3D;
 	vector<cv::Point2f> leftPoint, rightPoint, leftTestPoint,rightTestPoint;
 	vector<cv::Point3f> leftNormalizedPoint, rightNormalizedPoint;
+
+	// scale the points
+	/*leftTrackedPoint.x = lambda*leftTrackedPoint.x;
+	leftTrackedPoint.y = lambda*leftTrackedPoint.y;
+
+	rightTrackedPoint.x = lambda*rightTrackedPoint.x;
+	rightTrackedPoint.y = lambda*rightTrackedPoint.y;*/
 
 	leftPoint.push_back(leftTrackedPoint);
 	rightPoint.push_back(rightTrackedPoint);
@@ -1566,9 +1576,11 @@ void StereoCamera::evaluateResults(void){
 	gemm(KLeft,PLeft,1.0,cv::noArray(),0.0,P_realLeft);
 	gemm(KRight,PRight,1.0,cv::noArray(),0.0, P_realRight);
 
-	// scaling factor
-	double lambda = scaleFactorValue;
+	// ////////////////////////////////////////////////////////////////////////////////////////
+	// Triangulation Methods
 
+	///////////////////////////////////////////////////////////////////////////////////////////
+	// 1. Using Normalized Camera Matrices and Points
 	triangulatePoints(PLeft, PRight, leftTestPoint, rightTestPoint, triangulateTrackedPoint_3D);
 
 	// converts from homogeneous
@@ -1577,25 +1589,63 @@ void StereoCamera::evaluateResults(void){
 	
 	// prints X,Y,Z values
 	cout << "the current position of tracked point is: \n"
-		<< "X " << lambda*trackedPoint_3D.front().x << "\n"
-		<< "Y " << lambda*trackedPoint_3D.front().y << "\n"
-		<< "Z " << lambda*trackedPoint_3D.front().z << "\n" << endl;
+		<< "X " << trackedPoint_3D.front().x << "\n"
+		<< "Y " << trackedPoint_3D.front().y << "\n"
+		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;	
+
+	///////////////////////////////////////////////////////////////////////////////////////////
+	// 2. Using Results fron calibration Process K, R and t values
+	cv::Mat point3D_FromCalibration;
+	cv:Mat R_Left, t_Left, R_Right, t_Right;
+
+	///////////////////////////////////////////////////////////////////////////////////////////
+	// 3. call linear LS triangulation
 
 	// convert to homogeneous points
 	cv::convertPointsToHomogeneous(leftPoint, inputLeft);
 	cv::convertPointsToHomogeneous(rightPoint, inputRight);
 
-	// call linear LS triangulation
 	vector<cv::Point3f> point3D;
 	linearLSTriangulation(inputLeft,P_realLeft,inputRight,P_realRight,point3D);
 
 	// prints X,Y,Z values
 	cout << "the current position of tracked point using linear LS triangulation is: \n"
-		<< "X " << lambda*point3D.front().x << "\n"
-		<< "Y " << lambda*point3D.front().y << "\n"
-		<< "Z " << lambda*point3D.front().z << "\n" << endl;
+		<< "X " << point3D.front().x << "\n"
+		<< "Y " << point3D.front().y << "\n"
+		<< "Z " << point3D.front().z << "\n" << endl;
 
-		
+	// testing triangulation
+	cv::Point3d uL(leftTrackedPoint.x, leftTrackedPoint.y,1.0);
+	cv::Point3d uR(rightTrackedPoint.x, rightTrackedPoint.y, 1.0);
+
+	vector<cv::Point3f> point3DB;
+	linearLSTriangulation(leftNormalizedPoint, PLeft, rightNormalizedPoint, PRight, point3DB);
+
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using linear LS triangulation with Normalized Points is: \n"
+		<< "X " << point3DB.front().x << "\n"
+		<< "Y " << point3DB.front().y << "\n"
+		<< "Z " << point3DB.front().z << "\n" << endl;
+
+	///////////////////////////////////////////////////////////////////////////////////////////
+	// 4. Compare with Real approximated values
+	int Baseline = 72;
+	int Kpixels = 200;
+	float disparity = leftTrackedPoint.x - rightTrackedPoint.x;
+	float f = averageFocalLength*Kpixels;
+	double Z = Baseline*f/disparity;
+	double X = leftTrackedPoint.x*Z / f;
+	double Y = leftTrackedPoint.y*Z / f;
+
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using linear LS triangulation is: \n"
+		<< "X " << X << "\n"
+		<< "Y " << Y << "\n"
+		<< "Z " << Z << "\n" 
+		<< "scale Factor OpenCV" << Z / trackedPoint_3D.front().z << "\n"
+		<< "scale Factor Linear LS not normalized" << Z / point3D.front().z << "\n"
+		<< "scale Factor Linear LS normalized" << Z / point3DB.front().z << "\n"
+		<< "scale Factor from Lourakis'13 " << lambda << "\n" << endl;
 }
 
 // perform a linear triangulation
@@ -1612,7 +1662,7 @@ void StereoCamera::linearLSTriangulation(vector<cv::Point3f> PointLeft, cv::Mat 
 	cv::Point3f point3D;
 
 	int x1 = Point1.x;int y1 = Point1.y;
-	int x2 = Point2.x;int y2 = Point2.y;
+	int x2 = Point2.x; int y2 = Point1.y; //Point2.y;
 
 	cv::Mat A =(Mat_<double>(4,3) << x1*P1.at<double>(2, 0) - P1.at<double>(0, 0), x1*P1.at<double>(2, 1) - P1.at<double>(0, 1), x1*P1.at<double>(2, 2) - P1.at<double>(0, 2),
 									 y1*P1.at<double>(2, 0) - P1.at<double>(1, 0), y1*P1.at<double>(2, 1) - P1.at<double>(1, 1), y1*P1.at<double>(2, 2) - P1.at<double>(1, 2),
