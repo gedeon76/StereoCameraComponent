@@ -1594,9 +1594,112 @@ void StereoCamera::evaluateResults(void){
 		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;	
 
 	///////////////////////////////////////////////////////////////////////////////////////////
-	// 2. Using Results fron calibration Process K, R and t values
-	cv::Mat point3D_FromCalibration;
-	cv:Mat R_Left, t_Left, R_Right, t_Right;
+	// 2. Using Longuet-Higgins 3D algorithm for triangulation from essential Matrix
+	//		From Wikipedia "Essential Matrix article"
+	cv::Mat R,t;
+	cv::Mat tmpE1, tmpE2, tmpE3 , finalEconstraintValue;
+	std::vector<cv::Mat> relativeTransform;
+	getStereoTransforms(relativeTransform);
+
+	if (!relativeTransform.empty()){
+
+		R = relativeTransform.at(0);
+		t = relativeTransform.at(1);
+	}
+
+	// check E constraints
+	double epsilonE = 1E-12;
+	cv::Scalar traceConstraintValue;
+	//	a. det(E) = 0;
+	double detValue = cv::determinant(E_Matrix);
+	if (detValue < epsilonE){
+
+		// b. 2*E*Etranspose*E - trace(E*Etranspose)*E = 0
+		// It also accounts for the requirement that
+		// SVD(E) must have two values equal and the third equal to zero
+		gemm(E_Matrix, E_Matrix, 1.0, cv::noArray(), 0.0, tmpE1, cv::GEMM_2_T);
+		cv::Scalar traceEET = cv::trace(tmpE1);
+		gemm(tmpE1, E_Matrix, 2.0, cv::noArray(), 0.0, tmpE2);
+		tmpE3 = traceEET[0] * E_Matrix;	
+		finalEconstraintValue = tmpE2 - tmpE3;
+		traceConstraintValue = cv::mean(finalEconstraintValue);
+	}
+	
+	if (traceConstraintValue[0] < epsilonE){
+
+		cout << "This is a good E matrix \n" << endl;
+	}
+
+	// use normalized points according to the pinhole camera model
+	std::vector<cv::Point3f> leftNormTest, rightNormTest;
+	convertPointsToHomogeneous(leftPoint, leftNormTest);
+	convertPointsToHomogeneous(rightPoint, rightNormTest);
+
+	// Estimate the (X,Y,Z) position for tracked point
+	// Z = (r1-x'r3).t/(r1-x'r3).x_vector
+	// X = Z*x; Y = Z*y;
+	cv::Mat R1(t.rows, t.cols, t.type());
+	cv::Mat R2(t.rows, t.cols, t.type());
+	cv::Mat x_normHom(R1);
+
+	x_normHom.at<double>(0, 0) = leftNormTest.at(0).x;
+	x_normHom.at<double>(1, 0) = leftNormTest.at(0).y;
+	x_normHom.at<double>(2, 0) = 1;
+
+	// add the scale factor to triangulate points only at R so R = sR
+	double fValue = 1;
+	double coordinateX = rightNormTest.at(0).x /fValue ;
+	double coordinateY = rightNormTest.at(0).y /fValue;
+
+	R1.at<double>(0, 0) = R.at<double>(0, 0) - coordinateX*R.at<double>(2, 0);
+	R1.at<double>(1, 0) = R.at<double>(0, 1) - coordinateX*R.at<double>(2, 1);
+	R1.at<double>(2, 0) = R.at<double>(0, 2) - coordinateX*R.at<double>(2, 2);
+
+	R2.at<double>(0, 0) = R.at<double>(1, 0) - coordinateY*R.at<double>(2, 0);
+	R2.at<double>(1, 0) = R.at<double>(1, 1) - coordinateY*R.at<double>(2, 1);
+	R2.at<double>(2, 0) = R.at<double>(1, 2) - coordinateY*R.at<double>(2, 2);
+
+	double value1 = R1.dot(t);
+	double value2 = R1.dot(x_normHom);
+	double value3 = R2.dot(t);
+	double value4 = R2.dot(x_normHom);
+
+	double Z_Longuet = value1 / value2;
+	double Z_Longuet2 = value3 / value4;
+	double X_Longuet = Z_Longuet*leftNormTest.at(0).x;
+	double Y_Longuet = Z_Longuet*leftNormTest.at(0).y;
+
+	double X_Longuet2 = Z_Longuet2*leftNormTest.at(0).x;
+	double Y_Longuet2 = Z_Longuet2*leftNormTest.at(0).y;
+
+	cv::Mat value1Mat, value2Mat, value3Mat, value4Mat;
+	gemm(R1, t, 1.0, cv::noArray(), 0.0, value1Mat, cv::GEMM_1_T);
+	gemm(R1, x_normHom, 1.0, cv::noArray(), 0.0, value2Mat, cv::GEMM_1_T);
+
+	gemm(R2, t, 1.0, cv::noArray(), 0.0, value3Mat, cv::GEMM_1_T);
+	gemm(R2, x_normHom, 1.0, cv::noArray(), 0.0, value4Mat, cv::GEMM_1_T);
+
+	double Z_LonguetB = value1Mat.at<double>(0, 0) / value2Mat.at<double>(0, 0);
+	double Z_Longuet2B = value3Mat.at<double>(0, 0) / value4Mat.at<double>(0, 0);
+	double X_LonguetB = Z_LonguetB*leftNormTest.at(0).x/fValue;
+	double Y_LonguetB = Z_LonguetB*leftNormTest.at(0).y/fValue;
+
+	double X_Longuet2B = Z_Longuet2B*leftNormTest.at(0).x/fValue;
+	double Y_Longuet2B = Z_Longuet2B*leftNormTest.at(0).y/fValue;
+	
+
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using linear LS triangulation is: \n"
+		<< "X_Longuet " << X_Longuet << "\n"
+		<< "Y_Longuet " << Y_Longuet << "\n"
+		<< "Z_Longuet " << Z_Longuet << "\n" << endl;
+
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using linear LS triangulation is: \n"
+		<< "X_Longuet2 " << X_Longuet2 << "\n"
+		<< "Y_Longuet2 " << Y_Longuet2 << "\n"
+		<< "Z_Longuet2 " << Z_Longuet2 << "\n" << endl;
+	
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	// 3. call linear LS triangulation
@@ -1639,13 +1742,12 @@ void StereoCamera::evaluateResults(void){
 
 	// prints X,Y,Z values
 	cout << "the current position of tracked point using linear LS triangulation is: \n"
-		<< "X " << X << "\n"
+		<< "X " << X << "\n" 
 		<< "Y " << Y << "\n"
 		<< "Z " << Z << "\n" 
-		<< "scale Factor OpenCV" << Z / trackedPoint_3D.front().z << "\n"
-		<< "scale Factor Linear LS not normalized" << Z / point3D.front().z << "\n"
-		<< "scale Factor Linear LS normalized" << Z / point3DB.front().z << "\n"
-		<< "scale Factor from Lourakis'13 " << lambda << "\n" << endl;
+		<< "Scale Factor Longuet: " << Z / Z_Longuet << "\n"
+		<< "Scale Factor Longuet2: " << Z / Z_Longuet2 << "\n"
+		<< "Scale Factor Lorakis'13: " << scaleFactorValue << endl;
 }
 
 // perform a linear triangulation
