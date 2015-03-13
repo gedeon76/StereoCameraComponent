@@ -94,13 +94,19 @@ double StereoCamera::getEsentialMatrix(cv::Mat &EsentialMatrix)
 }
 
 // get the scale factor for triangulation
-void StereoCamera::getScaleFactor(double &ScaleFactor){
+void StereoCamera::getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor){
 
+	cv::Mat rotMat, trasMat;
 	readAssymetricalCirclesData();
-	estimateScaleFactor(ScaleFactor);
+	estimateScaleFactor(ScaleFactor, rotMat, trasMat);
 
 	// save estimated scale factor
 	scaleFactorValue = ScaleFactor;
+	rotMat.copyTo(scaleRotationFactor);
+	trasMat.copyTo(scaleTraslationFactor);
+
+	rotMat.copyTo(RotationFactor);
+	trasMat.copyTo(TraslationFactor);
 }
 
 // get the path to a given file
@@ -1077,14 +1083,10 @@ void StereoCamera::findProjectionMatricesFrom_E_Matrix(vector<cv::Mat> &Projecti
 }
 
 // Estimate the Scale Factor for 3D triangulation
-void StereoCamera::estimateScaleFactor(double &ScaleFactor){
+void StereoCamera::estimateScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor){
 
 	// ABSOLUTE ROTATION METHOD From Lourakis'13 article titled:
 	// Accurate Scale Factor Estimation in 3D reconstruction
-
-	// get the K matrices
-	//cv::Mat K_left = Mat::eye(3, 3, CV_64F);
-	//cv::Mat K_right = Mat::eye(3, 3, CV_64F);	
 
 	///////////////////////////////////////////////////////////////////////////
 	// 1. build the Mi positions for each circle from the calibration Patterns
@@ -1103,6 +1105,7 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 	vector<circlePatternInfo> leftPattern, rightPattern;
 	cv::Point3f rvec1, tvec1, Mi_Rotation, Mi_Position, Mi_PositionHom;
 	cv::Mat Mis_3D_Homogeneous;
+
 	// get data for this image
 	leftPattern = Mi_Left.at(4).circlesData;
 	rightPattern = Mi_Right.at(4).circlesData;	
@@ -1282,8 +1285,15 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor){
 	// print traslation t
 	cout << "traslation t between Mi and Ni points \n" << t << endl;
 
-	// return Scale factor
+	// return Scale factors according to an Isometry/Similarity Transformation
 	ScaleFactor = lambda;
+	cv::Mat RFactor, tFactor;
+
+	R.copyTo(RFactor);
+	t.copyTo(tFactor);
+
+	RFactor.copyTo(RotationFactor);
+	tFactor.copyTo(TraslationFactor);
 }
 
 
@@ -1592,6 +1602,25 @@ void StereoCamera::evaluateResults(void){
 		<< "X " << trackedPoint_3D.front().x << "\n"
 		<< "Y " << trackedPoint_3D.front().y << "\n"
 		<< "Z " << trackedPoint_3D.front().z << "\n" << endl;	
+
+	// Apply isometric/Similarity Transform Ni = lambda*R*Mi + t
+	cv::Mat Ni_3D(scaleTraslationFactor.rows,scaleTraslationFactor.cols, scaleTraslationFactor.type());
+	
+	Ni_3D.at<float>(0, 0) = trackedPoint_3D.front().x;
+	Ni_3D.at<float>(1, 0) = trackedPoint_3D.front().y;
+	Ni_3D.at<float>(2, 0) = trackedPoint_3D.front().z;
+
+	cv::Mat tmpNi,Rinv, Mi_3D;
+	Rinv = scaleRotationFactor.inv(cv::DECOMP_SVD);
+	tmpNi = Ni_3D - scaleTraslationFactor;
+	gemm(Rinv, tmpNi, 1.0, cv::noArray(), 0.0, Mi_3D, GEMM_1_T);
+
+	Mi_3D = (1/lambda)*Mi_3D;
+	// prints X,Y,Z values
+	cout << "the current position of tracked point using isometric transform is: \n"
+		<< "X iso " << Mi_3D.at<float>(0,0) << "\n"
+		<< "Y iso " << Mi_3D.at<float>(1, 0) << "\n"
+		<< "Z iso " << Mi_3D.at<float>(2, 0) << "\n" << endl;
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	// 2. Using Longuet-Higgins 3D algorithm for triangulation from essential Matrix

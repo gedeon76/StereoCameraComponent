@@ -101,7 +101,7 @@ public:
 
 	/// get the scale factor needed to know the true values of objects under triangulation
 	/// @param[in,out] ScaleFactor it contains the scale factor needed for triangulation calculus
-	virtual void getScaleFactor(double &ScaleFactor) = 0;
+	virtual void getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor) = 0;
 
 	/// get the path to a given file
 	/// @param[in,out] Filename it contains the name of the file to look for

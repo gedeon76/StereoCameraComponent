@@ -33,7 +33,7 @@ public:
 
 	double getFundamentalMatrix(cv::Mat &FundamentalMatrix);
 	double getEsentialMatrix(cv::Mat &EsentialMatrix);	
-	void getScaleFactor(double &ScaleFactor);
+	void getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor);
 	bool getPathForThisFile(string &Filename, string &pathFound);
 	void testCalibrationProcess();
 
@@ -60,6 +60,7 @@ private:
 	cv::Mat KLeft, KRight;
 	cv::Mat extrinsicParameters;
 	double scaleFactorValue;
+	cv::Mat scaleRotationFactor, scaleTraslationFactor;
 	int cameraGlobalStatus;	
 	float averageFocalLength;
 	cv::Point2d averagePrincipalPoint;
@@ -126,7 +127,7 @@ private:
 	/// Estimate Scale factor for triangulation
 	/// According to Lourakis'13 paper
 	/// Accurate Scale Factor Estimation in 3D Reconstruction
-	void estimateScaleFactor(double &ScaleFactor);
+	void estimateScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor);
 
 	/// Test if this 3D point is correct, all values must be positive 
 	bool test3DPoint(vector<cv::Point3f> pointsToTest);
