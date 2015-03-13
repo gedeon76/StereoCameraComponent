@@ -72,14 +72,15 @@ public:
 	/// get some useful parameters from the intrinsic matrix found after the calibration process
 	/// @param[in,out] CameraParameters It contains some useful camera parameters
 	/// as image size, sensor information, field of view, aspect ratio, principal point and focal length
+	/// At first time we are using a pair of C270 logitech webcams but could be extensable to any pair of cameras
 	virtual void getCameraUsefulParameters(cameraParameters &CameraUsefulParameters) = 0;
 
-	/// get the Rotation and traslation between the first and second camera
+	/// get the relative Rotation and traslation between the first and second camera
 	/// @param[in,out] StereoTransforms It contains the 3x3 rotation matrix  and  3x1 traslation matrix 
 	/// transforms between the left and right cameras
 	virtual void getStereoTransforms(vector<cv::Mat> &StereoTransforms) = 0;
 
-	/// get the projection matrices for each camera
+	/// get the normalized projection matrices for each camera
 	/// @param[in,out] ProjectionMatrices It contains the 3x4 projection matrices Pleft and Pright
 	/// for each camera
 	virtual void getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices) = 0;
@@ -100,6 +101,11 @@ public:
 	virtual double getEsentialMatrix(cv::Mat &EsentialMatrix) = 0;	
 
 	/// get the scale factor needed to know the true values of objects under triangulation
+	/// AT THIS TIME THE RESULTS ARE NOT VERY PRECISE SO USE ONLY FOR HAVE SOME IDEA OF SCALING
+	/// IT USES THE CIRCLES CALIBRATION PATTERN AS REFERENCE FOR FINDING THE SCALE
+	/// It uses a similarity transform to get theses factors Ni = ScaleFactor*RotationFactor*Mi + TraslationFactor
+	///  where Ni are the triangulated points and Mi the same points in real coordinates
+	/// This method will be used for transform points between haptic reference system and the camera reference system
 	/// @param[in,out] ScaleFactor it contains the scale factor needed for triangulation calculus
 	virtual void getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor) = 0;
 

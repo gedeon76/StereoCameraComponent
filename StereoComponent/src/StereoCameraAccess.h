@@ -9,11 +9,22 @@
 	 \code{.cpp}
 	 	 
 
+
 	//This project test the StereoCamera Component
 	//created for the purpose of calibrate a StereoHead
 	//that uses two logitech c270 webcams
 
+
+
+	// read the .xml configuration files for the cameras
+	string myPath;
+	
 	#include "StereoCameraAccess.h"
+	#include <boost\filesystem.hpp>
+
+	using namespace std;
+	using namespace cv;
+	using namespace boost::filesystem;
 
 	int main(int argc, char ** argv)
 	{
@@ -34,12 +45,15 @@
 		vector <cv::Mat> DistortionParameters;
 		vector <cv::Mat> StereoTransforms;
 		vector <cv::Mat> ProjectionMatrices;
+		double scaleFactor = 0;
 		double VergenceAngle = 0;
 		int CameraCalibrationStatus = 0;
+		cameraParameters cameraUsefulParameters;
 
 		double ErrorFundamentalMatrix = 0, ErrorEsentialMatrix = 0;
 		cv::Mat FundamentalMatrix;
 		cv::Mat EsentialMatrix;
+		cv::Mat rotationFactor, traslationFactor;
 
 		// call the methods from the StereoCamera Component
 
@@ -49,9 +63,22 @@
 
 		if (CameraCalibrationStatus == InterfaceStereoCamera::STEREO_NOT_CALIBRATED)
 		{
-			// read the .xml configuration files for the cameras
-			leftCameraSettingsFile.assign("C:/Code/UMLCode/StereoComponent/src/Left_Setup_c270.xml");
-			rightCameraSettingsFile.assign("C:/Code/UMLCode/StereoComponent/src/Right_Setup_c270.xml");
+			string FileName("Left_Setup_c270.xml");
+
+			boost::filesystem::path p{ "/" };
+			StereoComponent->getPathForThisFile(FileName, myPath);
+
+			boost::filesystem::path currentPath = boost::filesystem::current_path();
+
+			boost::filesystem::directory_iterator it1{ currentPath };
+			while (it1 != boost::filesystem::directory_iterator{})
+				std::cout << *it1++ << '\n';
+
+			boost::filesystem::path pathToSetupFiles = boost::filesystem::path(myPath);
+			boost::filesystem::path parentPath = pathToSetupFiles.parent_path();
+
+			leftCameraSettingsFile.assign(parentPath.generic_string() + p.generic_string() + "Left_Setup_c270.xml");
+			rightCameraSettingsFile.assign(parentPath.generic_string() + p.generic_string() + "Right_Setup_c270.xml");
 
 			// call the calibration process
 			StereoComponent->calibrateStereoCamera(leftCameraSettingsFile, rightCameraSettingsFile);
@@ -60,15 +87,22 @@
 
 		CameraCalibrationStatus = StereoComponent->getStereoCameraState();
 
+
 		if (CameraCalibrationStatus == InterfaceStereoCamera::STEREO_CALIBRATED)
 		{
 			// get the results
+			StereoComponent->getCameraUsefulParameters(cameraUsefulParameters);
 			StereoComponent->getIntrinsicParameters(IntrinsicParameters);
 			StereoComponent->getDistortionParameters(DistortionParameters);
-			StereoComponent->getProjectionMatrices(ProjectionMatrices);
+			StereoComponent->getFundamentalMatrix(FundamentalMatrix);
+			StereoComponent->getEsentialMatrix(EsentialMatrix);
 			StereoComponent->getStereoTransforms(StereoTransforms);
-		}
+			StereoComponent->getProjectionMatrices(ProjectionMatrices);
 
+			// perform a tracking test to proof the results
+			StereoComponent->getScaleFactor(scaleFactor, rotationFactor, traslationFactor);
+			StereoComponent->testCalibrationProcess();
+		}
 
 		delete StereoComponent;
 
