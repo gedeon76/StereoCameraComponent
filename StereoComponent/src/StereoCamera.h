@@ -36,10 +36,9 @@ public:
 	void getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor);
 	bool getPathForThisFile(string &Filename, string &pathFound);
 	void testCalibrationProcess();
+	void triangulatePoint(cv::Point2f leftPoint, cv::Point2f rightPoint, cv::Point3d position3D);
 
-	/// Find a 3D point test method
-	void find3DPoint();
-
+	
 private:
 	boost::filesystem::path pathToSetupFiles, parentPath;
 	string leftInputSettingsFile;
@@ -61,6 +60,7 @@ private:
 	cv::Mat extrinsicParameters;
 	double scaleFactorValue;
 	cv::Mat scaleRotationFactor, scaleTraslationFactor;
+	double vergenceAngle;
 	int cameraGlobalStatus;	
 	float averageFocalLength;
 	cv::Point2d averagePrincipalPoint;

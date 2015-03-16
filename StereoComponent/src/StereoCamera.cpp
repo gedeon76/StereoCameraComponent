@@ -66,10 +66,12 @@ void StereoCamera::getProjectionMatrices(vector<cv::Mat> &ProjectionMatrices){
 
 }
 
-// get the vergence angle
+// get the vergence angle in radians
 double StereoCamera::getVergenceAngle(){
 
-	double Angle=0;
+	// expressed in radians
+	// here we a re taking the yaw angle from Yaw Pitch Roll representation 
+	double Angle = vergenceAngle;
 	return Angle;
 }
 
@@ -121,6 +123,29 @@ bool StereoCamera::getPathForThisFile(string &fileName, string &pathFound)
 void StereoCamera::testCalibrationProcess(){
 
 	trackTestPointer();
+}
+
+// perform the triangulation of a given match in the images
+// remember you must have a good match try Optimal Algorithm from Zisserman Book chapter 12
+void StereoCamera::triangulatePoint(cv::Point2f leftPoint, cv::Point2f rightPoint, cv::Point3d position3D){
+
+	cv::Point3d final3Dposition;
+
+	int Baseline = 72;
+	int Kpixels = 200;
+	float disparity = leftPoint.x - rightPoint.x;
+	float f = averageFocalLength*Kpixels;
+	double Z = Baseline*f / disparity;
+	double X = leftPoint.x*Z / f;
+	double Y = leftPoint.y*Z / f;
+
+	// return 3D position
+	final3Dposition.x = X;
+	final3Dposition.y = Y;
+	final3Dposition.z = Z;
+
+	position3D = final3Dposition;
+
 }
 
 
@@ -942,10 +967,11 @@ void StereoCamera::findEssentialMatrix(cv::Mat &EsentialMatrix) {
 }
 
 
-// get the rotation angles from a rotation matrix
+// get the rotation angles Alpha, Beta and Gamma from a rotation matrix
 void StereoCamera::getRotationAnglesFromMatrix(cv::Mat &rotationMatrix,double &Alpha,double &Beta,double &Gamma){
 
 	// the method used here is from the notes from the web of Steve LaValle curse on Planning Algorithms
+	// more details at the section 3.2 from the book of Motion Planning from Steve LaValle
 	double R11, R21, R31, R32, R33;
 
 	R11 = rotationMatrix.at<double>(0,0);
@@ -954,6 +980,7 @@ void StereoCamera::getRotationAnglesFromMatrix(cv::Mat &rotationMatrix,double &A
 	R32 = rotationMatrix.at<double>(2,1);
 	R33 = rotationMatrix.at<double>(2,2);
 
+	// look for the correct quadrant
 	Alpha = std::atan2(R21, R11);
 	Beta = std::atan2(-R31,hypot(R32,R33));
 	Gamma = std::atan2(R32,R33);
@@ -1007,6 +1034,9 @@ void StereoCamera::findStereoTransform(vector<cv::Mat> &RotationAndTraslation) {
 	// get axis of rotation
 	double Alpha, Beta, Gamma;
 	getRotationAnglesFromMatrix(Rotation, Alpha, Beta, Gamma);
+
+	// save the vergence angle corresponding to Alpha
+	vergenceAngle = Alpha;
 
 	// get the traslation
 	double X_shift, Y_shift, Z_shift;
@@ -1296,12 +1326,6 @@ void StereoCamera::estimateScaleFactor(double &ScaleFactor, cv::Mat &RotationFac
 	tFactor.copyTo(TraslationFactor);
 }
 
-
-// find  a 3d point position
-void StereoCamera::find3DPoint() {
-	// TODO - implement StereoCamera::find3DPoint
-	throw "Not yet implemented";
-}
 
 // build a normalized projection Matrix P = [R t]
 void StereoCamera::build_Projection_Matrix(cv::Mat &P, cv::Mat R, cv::Mat T){
@@ -1696,39 +1720,13 @@ void StereoCamera::evaluateResults(void){
 	double Z_Longuet = value1 / value2;
 	double Z_Longuet2 = value3 / value4;
 	double X_Longuet = Z_Longuet*leftNormTest.at(0).x;
-	double Y_Longuet = Z_Longuet*leftNormTest.at(0).y;
-
-	double X_Longuet2 = Z_Longuet2*leftNormTest.at(0).x;
-	double Y_Longuet2 = Z_Longuet2*leftNormTest.at(0).y;
-
-	cv::Mat value1Mat, value2Mat, value3Mat, value4Mat;
-	gemm(R1, t, 1.0, cv::noArray(), 0.0, value1Mat, cv::GEMM_1_T);
-	gemm(R1, x_normHom, 1.0, cv::noArray(), 0.0, value2Mat, cv::GEMM_1_T);
-
-	gemm(R2, t, 1.0, cv::noArray(), 0.0, value3Mat, cv::GEMM_1_T);
-	gemm(R2, x_normHom, 1.0, cv::noArray(), 0.0, value4Mat, cv::GEMM_1_T);
-
-	double Z_LonguetB = value1Mat.at<double>(0, 0) / value2Mat.at<double>(0, 0);
-	double Z_Longuet2B = value3Mat.at<double>(0, 0) / value4Mat.at<double>(0, 0);
-	double X_LonguetB = Z_LonguetB*leftNormTest.at(0).x/fValue;
-	double Y_LonguetB = Z_LonguetB*leftNormTest.at(0).y/fValue;
-
-	double X_Longuet2B = Z_Longuet2B*leftNormTest.at(0).x/fValue;
-	double Y_Longuet2B = Z_Longuet2B*leftNormTest.at(0).y/fValue;
-	
+	double Y_Longuet = Z_Longuet*leftNormTest.at(0).y;	
 
 	// prints X,Y,Z values
 	cout << "the current position of tracked point using linear LS triangulation is: \n"
 		<< "X_Longuet " << X_Longuet << "\n"
 		<< "Y_Longuet " << Y_Longuet << "\n"
-		<< "Z_Longuet " << Z_Longuet << "\n" << endl;
-
-	// prints X,Y,Z values
-	cout << "the current position of tracked point using linear LS triangulation is: \n"
-		<< "X_Longuet2 " << X_Longuet2 << "\n"
-		<< "Y_Longuet2 " << Y_Longuet2 << "\n"
-		<< "Z_Longuet2 " << Z_Longuet2 << "\n" << endl;
-	
+		<< "Z_Longuet " << Z_Longuet << "\n" << endl;	
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	// 3. call linear LS triangulation
@@ -1775,7 +1773,6 @@ void StereoCamera::evaluateResults(void){
 		<< "Y " << Y << "\n"
 		<< "Z " << Z << "\n" 
 		<< "Scale Factor Longuet: " << Z / Z_Longuet << "\n"
-		<< "Scale Factor Longuet2: " << Z / Z_Longuet2 << "\n"
 		<< "Scale Factor Lorakis'13: " << scaleFactorValue << endl;
 }
 

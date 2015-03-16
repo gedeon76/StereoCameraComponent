@@ -117,5 +117,8 @@ public:
 
 	/// realize a test to probe the results from this calibration process
 	virtual void testCalibrationProcess() = 0;
+
+	/// triangulate a point given its correspondences in the left and right images
+	virtual void triangulatePoint(cv::Point2f leftPoint, cv::Point2f rightPoint, cv::Point3d position3D) = 0;
 	
 };
