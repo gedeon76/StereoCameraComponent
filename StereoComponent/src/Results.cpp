@@ -24,6 +24,12 @@ void Results::write(FileStorage& fs) const //Write serialization for this class
 		<< "square_Size" << squareSize
 		<< "flagValue" << flagValue
 
+		<< "Stereo_Baseline" << StereoBaseline
+		<< "Sensor_size_Width" << sensorSizeWidth
+		<< "Sensor_size_Height" << sensorSizeHeight
+		<< "Mx" << Mx
+		<< "My" << My
+
 		<< "Camera_Matrix" << intrinsicCameraMatrix
 		<< "Distortion_Coefficients" << distortionCoefficients
 
@@ -46,6 +52,12 @@ void Results::read(const FileNode& node)	//Read serialization for this class
 	node["board_Height"] >> boardHeight;
 	node["square_Size"] >> squareSize;
 	node["flagValue"] >> flagValue;
+
+	node["Stereo_Baseline"] >> StereoBaseline;
+	node["Sensor_size_Width"] >> sensorSizeWidth;
+	node["Sensor_size_Height"] >> sensorSizeHeight;
+	node["Mx"] >> Mx;
+	node["My"] >> My;
 
 	node["Camera_Matrix"] >> intrinsicCameraMatrix;
 	node["Distortion_Coefficients"] >> distortionCoefficients;

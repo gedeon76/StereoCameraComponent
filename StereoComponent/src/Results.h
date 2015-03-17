@@ -40,6 +40,13 @@ public:
 	int imageHeight;					///< image height
 	int boardWidth;						///< width of board pattern (in number of patterns)
 	int boardHeight;					///< height of board pattern (in number of patterns)
+
+	float StereoBaseline;				///< The separation in mm between the cameras
+	float Mx;							///< Pixels per/mm in the sensor in the x direction
+	float My;							///< Pixels per/mm in the sensor in the y direction
+	float sensorSizeWidth;				///< image sensor width in mm
+	float sensorSizeHeight;				///< image sensor height in mm
+
 	float squareSize;					///< size of the pattern in mm
 	int flagValue;						///< flag value used to calculate the calibration
 	Mat intrinsicCameraMatrix;			///< OpenCV matrix containing the intrinsic parameters found

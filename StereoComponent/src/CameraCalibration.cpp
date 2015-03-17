@@ -561,7 +561,8 @@ void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParame
 	imageSize.height = calibrationResults.imageHeight;
 
 	// logitech c270 corresponding to 1/4" sensor
-	double sensorWidth = 3.2, sensorHeight = 2.4;
+	double sensorWidth = calibrationResults.sensorSizeWidth;
+	double sensorHeight = calibrationResults.sensorSizeHeight;
 	double fov_X, fov_Y, focalLength, aspectRatio;
 	Point2d principalPoint;
 
