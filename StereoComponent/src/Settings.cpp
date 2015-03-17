@@ -27,6 +27,11 @@ void Settings::write(FileStorage& fs) const  //Write serialization for this clas
 		<< "Input_FlipAroundHorizontalAxis" << flipVertical
 		<< "Input_Delay" << delay
 		<< "Input" << input
+		<< "Stereo_Baseline" << StereoBaseline
+		<< "Sensor_size_Width" << sensorSizeWidth
+		<< "Sensor_size_Height" << sensorSizeHeight
+		<< "Mx" << Mx
+		<< "My" << My
 		<< "}";
 
 }
@@ -48,6 +53,12 @@ void Settings::read(const FileNode& node)	//Read serialization for this class
 	node["Show_UndistortedImage"] >> showUndistorsed;
 	node["Input"] >> input;
 	node["Input_Delay"] >> delay;
+	node["Stereo_Baseline"] >> StereoBaseline;
+	node["Sensor_size_Width"] >> sensorSizeWidth;
+	node["Sensor_size_Height"] >> sensorSizeHeight;
+	node["Mx"] >> Mx;
+	node["My"] >> My;
+	
 	interpretate();
 }
 

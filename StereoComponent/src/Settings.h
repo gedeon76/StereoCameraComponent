@@ -64,6 +64,11 @@ public:
 	string input;							// The input ->
 	
 	int cameraID;
+	float StereoBaseline;					///< The separation in mm between the cameras
+	float Mx;								///< Pixels per/mm in the sensor in the x direction
+	float My;								///< Pixels per/mm in the sensor in the y direction
+	float sensorSizeWidth;					///< image sensor width in mm
+	float sensorSizeHeight;					///< image sensor height in mm
 	vector<string> imageList;
 	int atImageList;
 	VideoCapture inputCapture;

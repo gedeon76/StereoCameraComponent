@@ -24,6 +24,17 @@
   <!-- Time delay between frames in case of camera. -->
   <Input_Delay>5000</Input_Delay>	
   
+  <!-- Stereo separation or baseline -->
+  <Stereo_Baseline>72</Stereo_Baseline>  
+  <!-- Pixels per mm in horizontal direction -->
+  <Mx>200</Mx>  
+   <!-- Pixels per mm in vertical direction -->
+  <My>200</My>  
+  <!-- image sensor width in mm -->
+  <Sensor_size_Width>3.2</Sensor_size_Width>  
+   <!-- image sensor height in mm -->
+  <Sensor_size_Width>2.4</Sensor_size_Width>  
+  
   <!-- How many frames to use, for calibration. -->
   <Calibrate_NrOfFrameToUse>10</Calibrate_NrOfFrameToUse>
   <!-- Consider only fy as a free parameter, the ratio fx/fy stays the same as in the input cameraMatrix. 
