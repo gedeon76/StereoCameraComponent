@@ -113,12 +113,15 @@ struct cameraUsefulData
 	double imageHeight;
 	double sensorWidth;
 	double sensorHeight;
+	double pixelpermmX;
+	double pixelpermmY;
 	double fov_X;
 	double fov_Y;
 	double focalLength;
 	double principalPointX;
 	double principalPointY;
 	double aspectRatio;
+	double stereoBaseline;
 };
 
 /// This structure is used for save sorted matches

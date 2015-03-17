@@ -131,8 +131,9 @@ void StereoCamera::triangulatePoint(cv::Point2f leftPoint, cv::Point2f rightPoin
 
 	cv::Point3d final3Dposition;
 
-	int Baseline = 72;
-	int Kpixels = 200;
+	int Baseline = CameraUsefulParametersLeft.stereoBaseline;
+	int Kpixels = CameraUsefulParametersLeft.pixelpermmX;
+
 	float disparity = leftPoint.x - rightPoint.x;
 	float f = averageFocalLength*Kpixels;
 	double Z = Baseline*f / disparity;
@@ -1759,8 +1760,8 @@ void StereoCamera::evaluateResults(void){
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	// 4. Compare with Real approximated values
-	int Baseline = 72;
-	int Kpixels = 200;
+	double Baseline = CameraUsefulParametersLeft.stereoBaseline;
+	int Kpixels = CameraUsefulParametersLeft.pixelpermmX;
 	float disparity = leftTrackedPoint.x - rightTrackedPoint.x;
 	float f = averageFocalLength*Kpixels;
 	double Z = Baseline*f/disparity;

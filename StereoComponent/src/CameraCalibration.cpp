@@ -574,12 +574,15 @@ void CameraCalibration::getCameraUsefulParameters(cameraData &cameraUsefulParame
 	cameraUsefulParameters.imageHeight = imageSize.height;
 	cameraUsefulParameters.sensorWidth = sensorWidth;
 	cameraUsefulParameters.sensorHeight = sensorHeight;
+	cameraUsefulParameters.pixelpermmX = calibrationResults.Mx;
+	cameraUsefulParameters.pixelpermmY = calibrationResults.My;
 	cameraUsefulParameters.fov_X = fov_X;
 	cameraUsefulParameters.fov_Y = fov_Y;
 	cameraUsefulParameters.focalLength = focalLength;
 	cameraUsefulParameters.principalPointX = principalPoint.x;
 	cameraUsefulParameters.principalPointY = principalPoint.y;
 	cameraUsefulParameters.aspectRatio = aspectRatio;
+	cameraUsefulParameters.stereoBaseline = calibrationResults.StereoBaseline;
 
 }
 
