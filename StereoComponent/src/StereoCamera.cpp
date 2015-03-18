@@ -243,11 +243,17 @@ void StereoCamera::readAssymetricalCirclesData(){
 // read some useful parameters from the calibration results
 void StereoCamera::readCameraUsefulParameters(cameraParameters &cameraUsefulParameters)
 {
+	cameraUsefulParameters.clear();
+	vector<cameraUsefulData> tmpCameraParameters;
+	tmpCameraParameters.reserve(2);
+
 	leftCamera.getCameraUsefulParameters(CameraUsefulParametersLeft);
 	rightCamera.getCameraUsefulParameters(CameraUsefulParametersRight);
 
-	cameraUsefulParameters.push_back(CameraUsefulParametersLeft);
-	cameraUsefulParameters.push_back(CameraUsefulParametersRight);
+	tmpCameraParameters.push_back(CameraUsefulParametersLeft);
+	tmpCameraParameters.push_back(CameraUsefulParametersRight);
+
+	cameraUsefulParameters = tmpCameraParameters;
 }
 
 // read the distortion parameters from the calibration results

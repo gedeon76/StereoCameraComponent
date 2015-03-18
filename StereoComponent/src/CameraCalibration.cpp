@@ -412,6 +412,11 @@ void CameraCalibration::saveCameraParams(Settings& s, Size& imageSize, Mat& came
 	fs << "board_Width" << s.boardSize.width;
 	fs << "board_Height" << s.boardSize.height;
 	fs << "square_Size" << s.squareSize;
+	fs << "Stereo_Baseline" << s.StereoBaseline;
+	fs << "Sensor_size_Width" << s.sensorSizeWidth;
+	fs << "Sensor_size_Height" << s.sensorSizeHeight;
+	fs << "Mx" << s.Mx;
+	fs << "My" << s.My;
 
 	if (s.flag & CALIB_FIX_ASPECT_RATIO)
 		fs << "FixAspectRatio" << s.aspectRatio;

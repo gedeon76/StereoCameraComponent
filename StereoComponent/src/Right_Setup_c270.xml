@@ -33,7 +33,7 @@
   <!-- image sensor width in mm -->
   <Sensor_size_Width>3.2</Sensor_size_Width>  
    <!-- image sensor height in mm -->
-  <Sensor_size_Width>2.4</Sensor_size_Width>  
+  <Sensor_size_Height>2.4</Sensor_size_Height>  
   
   <!-- How many frames to use, for calibration. -->
   <Calibrate_NrOfFrameToUse>10</Calibrate_NrOfFrameToUse>
