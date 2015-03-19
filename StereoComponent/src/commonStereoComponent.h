@@ -150,6 +150,7 @@ struct Essential_MatrixData{
 };
 
 /// This structure save the final matrices that pass the filtering according to Millnert'06
+/// Master Thesis Titled: Range determination for Mobile robot using an omnidirectional camera
 struct E_MatricesCandidates{
 
 	double qE;

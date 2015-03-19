@@ -107,6 +107,8 @@ public:
 	///  where Ni are the triangulated points and Mi the same points in real coordinates
 	/// This method will be used for transform points between haptic reference system and the camera reference system
 	/// @param[in,out] ScaleFactor it contains the scale factor needed for triangulation calculus
+	/// @param[in,out] RotationFactor it contains the rotation scale factor needed for triangulation calculus
+	/// @param[in,out] TraslationFactor it contains the traslation scale factor needed for triangulation calculus
 	virtual void getScaleFactor(double &ScaleFactor, cv::Mat &RotationFactor, cv::Mat &TraslationFactor) = 0;
 
 	/// get the path to a given file
@@ -119,6 +121,10 @@ public:
 	virtual void testCalibrationProcess() = 0;
 
 	/// triangulate a point given its correspondences in the left and right images
+	/// @param[in,out] leftPoint it contains the left correspondence point
+	/// @param[in,out] rightPoint it contains the right correspondence point
+	/// @param[in,out] position3D it contains the triangulated point or real 3D position for the point
+	///	described by the correspondence points
 	virtual void triangulatePoint(cv::Point2f leftPoint, cv::Point2f rightPoint, cv::Point3d position3D) = 0;
 	
 };
